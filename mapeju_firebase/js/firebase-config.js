@@ -78,6 +78,9 @@ function showNotification(message, type = 'info') {
 
 // Verificar estado de autenticação
 auth.onAuthStateChanged(function(user) {
+  console.log("auth.onAuthStateChanged chamado"); // Inserir log aqui - Inicio da função
+  console.log("Valor de user:", user); // Inserir log aqui - Verificar o objeto 'user'
+
   const adminPanel = document.getElementById('admin-panel');
   const adminLoginBtn = document.getElementById('admin-login-btn');
   
@@ -92,6 +95,8 @@ auth.onAuthStateChanged(function(user) {
     }
     
     // Mostrar painel administrativo se o botão for clicado
+    console.log("Usuário está logado - dentro do IF"); // Inserir log aqui - Usuario está logado
+
     if (adminLoginBtn) {
       adminLoginBtn.addEventListener('click', function() {
         if (adminPanel) {
@@ -102,7 +107,9 @@ auth.onAuthStateChanged(function(user) {
   } else {
     // Usuário não está logado
     console.log('Usuário não autenticado');
-    
+
+        console.log("Usuário não está logado - dentro do ELSE"); // Inserir log aqui - Usuario não está logado
+
     // Configurar botão para abrir modal de login
     if (adminLoginBtn) {
       adminLoginBtn.addEventListener('click', function() {
