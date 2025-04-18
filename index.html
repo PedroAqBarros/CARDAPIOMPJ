@@ -9,6 +9,13 @@
     <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="css/whatsapp.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <!-- Firebase Auth -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 </head>
 <body>
     <div class="container">
@@ -25,6 +32,9 @@
         <main>
             <div class="categories">
                 <!-- Categorias serão adicionadas dinamicamente via JavaScript -->
+                <div class="loading-spinner" id="categories-loading">
+                    <i class="fas fa-spinner fa-spin"></i> Carregando categorias...
+                </div>
             </div>
 
             <div class="products">
@@ -71,6 +81,10 @@
             <h2>Área Administrativa</h2>
             <form id="admin-login-form">
                 <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
                     <label for="password">Senha:</label>
                     <input type="password" id="password" required>
                 </div>
@@ -83,7 +97,10 @@
     <div id="admin-panel" class="admin-panel">
         <div class="admin-header">
             <h2>Painel Administrativo</h2>
-            <button id="admin-logout-btn" class="secondary-btn"><i class="fas fa-sign-out-alt"></i> Sair</button>
+            <div class="admin-user-info">
+                <span id="admin-user-email"></span>
+                <button id="admin-logout-btn" class="secondary-btn"><i class="fas fa-sign-out-alt"></i> Sair</button>
+            </div>
         </div>
         
         <div class="admin-tabs">
@@ -105,6 +122,9 @@
                 
                 <div class="category-list">
                     <h4>Categorias Existentes</h4>
+                    <div class="loading-spinner" id="admin-categories-loading">
+                        <i class="fas fa-spinner fa-spin"></i> Carregando categorias...
+                    </div>
                     <ul id="admin-category-list">
                         <!-- Categorias serão adicionadas dinamicamente via JavaScript -->
                     </ul>
@@ -142,6 +162,9 @@
                 
                 <div class="product-list">
                     <h4>Produtos Existentes</h4>
+                    <div class="loading-spinner" id="admin-products-loading">
+                        <i class="fas fa-spinner fa-spin"></i> Carregando produtos...
+                    </div>
                     <div id="admin-product-list">
                         <!-- Produtos serão adicionados dinamicamente via JavaScript -->
                     </div>
@@ -150,6 +173,9 @@
         </div>
     </div>
 
+    <!-- Configuração do Firebase -->
+    <script src="js/firebase-config.js"></script>
+    <!-- Módulos da aplicação -->
     <script src="js/data.js"></script>
     <script src="js/admin.js"></script>
     <script src="js/app.js"></script>

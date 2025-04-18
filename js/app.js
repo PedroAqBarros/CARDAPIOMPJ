@@ -1,4 +1,4 @@
-// Aplicação principal do cardápio digital
+// Aplicação principal do cardápio digital com sincronização em tempo real
 document.addEventListener('DOMContentLoaded', function() {
     // Elementos do DOM
     const categoriesContainer = document.querySelector('.categories');
@@ -13,14 +13,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const cartBadge = document.getElementById('cart-badge');
     const cartElement = document.querySelector('.cart');
     const closeCartBtn = document.getElementById('close-cart-btn');
+    const categoriesLoading = document.getElementById('categories-loading');
+
+    // Variáveis para controle de estado
+    let selectedCategoryId = null;
+    let categoriesListener = null;
+    let productsListener = null;
 
     // Inicializar a aplicação
     initApp();
 
-    function initApp() {
-        // Renderizar categorias
-        renderCategories();
-        
+    async function initApp() {
         // Configurar eventos
         setupEventListeners();
         
@@ -30,17 +33,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Atualizar badge do carrinho
         updateCartBadge();
         
-        // Se houver categorias, selecionar a primeira por padrão
-        if (appData.categories.length > 0) {
-            selectCategory(appData.categories[0].id);
-        }
+        // Iniciar sincronização em tempo real
+        startRealtimeSync();
     }
 
     function setupEventListeners() {
         // Botão para limpar carrinho
         clearCartBtn.addEventListener('click', function() {
             if (confirm('Tem certeza que deseja limpar o carrinho?')) {
-                clearCart();
+                cartManager.clearCart();
                 renderCart();
                 updateCartBadge();
             }
@@ -53,12 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            const message = generateOrderMessage();
-            const whatsappUrl = `https://wa.me/556294535053?text=${message}`;
-            window.open(whatsappUrl, '_blank');
-            
-            // Mostrar confirmação
-            showOrderConfirmation();
+            sendOrderToWhatsApp();
         });
         
         // Botão flutuante do carrinho (mobile)
@@ -76,66 +72,89 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Mostrar confirmação de pedido
-    function showOrderConfirmation() {
-        // Criar elemento de confirmação
-        const confirmationDiv = document.createElement('div');
-        confirmationDiv.className = 'order-confirmation';
-        confirmationDiv.innerHTML = `
-            <p><i class="fas fa-check-circle"></i> Seu pedido foi enviado para o WhatsApp!</p>
-            <p>Aguarde a confirmação da Mapeju Doces.</p>
-        `;
-        
-        // Adicionar ao carrinho
-        cartElement.appendChild(confirmationDiv);
-        
-        // Remover após 5 segundos
-        setTimeout(() => {
-            cartElement.removeChild(confirmationDiv);
-        }, 5000);
-    }
-
-    // Atualizar badge do carrinho
-    function updateCartBadge() {
-        if (!cartBadge) return;
-        
-        const totalItems = appData.cart.reduce((total, item) => total + item.quantity, 0);
-        cartBadge.textContent = totalItems;
-        
-        if (totalItems === 0) {
-            cartBadge.style.display = 'none';
-        } else {
-            cartBadge.style.display = 'flex';
+    // Iniciar sincronização em tempo real
+    function startRealtimeSync() {
+        // Sincronizar categorias em tempo real
+        if (categoriesListener) {
+            categoriesListener();
         }
+        
+        categoriesListener = categoriesRef.orderBy('name').onSnapshot(snapshot => {
+            const categories = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            
+            renderCategories(categories);
+            
+            // Se houver categorias e nenhuma estiver selecionada, selecionar a primeira
+            if (categories.length > 0 && !selectedCategoryId) {
+                selectCategory(categories[0].id);
+            }
+            
+            // Ocultar spinner de carregamento
+            if (categoriesLoading) {
+                categoriesLoading.style.display = 'none';
+            }
+        }, error => {
+            console.error('Erro ao sincronizar categorias:', error);
+            showNotification('Erro ao carregar categorias', 'error');
+            
+            // Ocultar spinner de carregamento em caso de erro
+            if (categoriesLoading) {
+                categoriesLoading.style.display = 'none';
+                categoriesLoading.innerHTML = '<p class="error-message">Erro ao carregar categorias</p>';
+            }
+        });
     }
 
     // Renderizar categorias
-    function renderCategories() {
-        categoriesContainer.innerHTML = '';
+    function renderCategories(categories) {
+        // Manter referência aos botões existentes para preservar event listeners
+        const existingButtons = {};
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            existingButtons[btn.getAttribute('data-id')] = btn;
+        });
         
-        if (appData.categories.length === 0) {
-            categoriesContainer.innerHTML = '<p class="empty-message">Nenhuma categoria disponível</p>';
+        // Limpar container, mantendo o spinner de carregamento
+        Array.from(categoriesContainer.children).forEach(child => {
+            if (!child.id || child.id !== 'categories-loading') {
+                categoriesContainer.removeChild(child);
+            }
+        });
+        
+        if (categories.length === 0) {
+            const emptyMessage = document.createElement('p');
+            emptyMessage.className = 'empty-message';
+            emptyMessage.textContent = 'Nenhuma categoria disponível';
+            categoriesContainer.appendChild(emptyMessage);
             return;
         }
         
-        appData.categories.forEach(category => {
-            const button = document.createElement('button');
-            button.className = 'category-btn';
-            button.setAttribute('data-id', category.id);
-            button.textContent = category.name;
+        categories.forEach(category => {
+            let button;
             
-            button.addEventListener('click', function() {
-                // Remover classe active de todos os botões
-                document.querySelectorAll('.category-btn').forEach(btn => {
-                    btn.classList.remove('active');
+            // Reutilizar botão existente ou criar novo
+            if (existingButtons[category.id]) {
+                button = existingButtons[category.id];
+                button.textContent = category.name;
+            } else {
+                button = document.createElement('button');
+                button.className = 'category-btn';
+                button.setAttribute('data-id', category.id);
+                button.textContent = category.name;
+                
+                button.addEventListener('click', function() {
+                    selectCategory(category.id);
                 });
-                
-                // Adicionar classe active ao botão clicado
-                this.classList.add('active');
-                
-                // Renderizar produtos da categoria
-                selectCategory(category.id);
-            });
+            }
+            
+            // Adicionar classe active se for a categoria selecionada
+            if (category.id === selectedCategoryId) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
             
             categoriesContainer.appendChild(button);
         });
@@ -143,32 +162,54 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Selecionar categoria e mostrar seus produtos
     function selectCategory(categoryId) {
-        // Ativar botão da categoria
-        const categoryButtons = document.querySelectorAll('.category-btn');
-        categoryButtons.forEach(btn => {
-            if (parseInt(btn.getAttribute('data-id')) === categoryId) {
+        selectedCategoryId = categoryId;
+        
+        // Atualizar botões de categoria
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            if (btn.getAttribute('data-id') === categoryId) {
                 btn.classList.add('active');
             } else {
                 btn.classList.remove('active');
             }
         });
         
-        // Renderizar produtos da categoria
-        renderProductsByCategory(categoryId);
+        // Cancelar listener anterior de produtos
+        if (productsListener) {
+            productsListener();
+        }
+        
+        // Mostrar indicador de carregamento
+        productsContainer.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando produtos...</div>';
+        
+        // Iniciar sincronização de produtos para a categoria selecionada
+        productsListener = productsRef
+            .where('categoryId', '==', categoryId)
+            .orderBy('name')
+            .onSnapshot(snapshot => {
+                const products = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                renderProductsByCategory(products);
+            }, error => {
+                console.error('Erro ao sincronizar produtos:', error);
+                showNotification('Erro ao carregar produtos', 'error');
+                
+                productsContainer.innerHTML = '<div class="error-message">Erro ao carregar produtos</div>';
+            });
     }
 
     // Renderizar produtos por categoria
-    function renderProductsByCategory(categoryId) {
+    function renderProductsByCategory(products) {
         productsContainer.innerHTML = '';
         
-        const productsInCategory = appData.products.filter(product => product.categoryId === categoryId);
-        
-        if (productsInCategory.length === 0) {
+        if (products.length === 0) {
             productsContainer.innerHTML = '<div class="empty-message">Nenhum produto disponível nesta categoria</div>';
             return;
         }
         
-        productsInCategory.forEach(product => {
+        products.forEach(product => {
             const productCard = document.createElement('div');
             productCard.className = 'product-card';
             
@@ -187,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="product-info">
                     <h3 class="product-name">${product.name}</h3>
                     <p class="product-description">${product.description || ''}</p>
-                    <p class="product-price">R$ ${product.price.toFixed(2)}</p>
+                    <p class="product-price">R$ ${parseFloat(product.price).toFixed(2)}</p>
                     <button class="add-to-cart-btn" data-id="${product.id}">
                         <i class="fas fa-cart-plus"></i> Adicionar
                     </button>
@@ -197,8 +238,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Adicionar evento ao botão de adicionar ao carrinho
             const addToCartBtn = productCard.querySelector('.add-to-cart-btn');
             addToCartBtn.addEventListener('click', function() {
-                const productId = parseInt(this.getAttribute('data-id'));
-                addToCart(productId);
+                const productId = this.getAttribute('data-id');
+                cartManager.addToCart(productId);
                 renderCart();
                 updateCartBadge();
                 
@@ -215,10 +256,15 @@ document.addEventListener('DOMContentLoaded', function() {
             
             productsContainer.appendChild(productCard);
         });
+        
+        // Adicionar botões de pedido rápido
+        if (typeof whatsappIntegration !== 'undefined' && whatsappIntegration.addQuickOrderButtons) {
+            setTimeout(whatsappIntegration.addQuickOrderButtons, 500);
+        }
     }
 
     // Renderizar carrinho
-    function renderCart() {
+    async function renderCart() {
         // Limpar conteúdo atual
         cartItemsContainer.innerHTML = '';
         
@@ -233,9 +279,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Obter todos os produtos para renderizar o carrinho
+        const allProducts = await productManager.getProducts();
+        
         // Renderizar itens do carrinho
         appData.cart.forEach(item => {
-            const product = appData.products.find(prod => prod.id === item.productId);
+            const product = allProducts.find(prod => prod.id === item.productId);
             if (!product) return;
             
             const cartItem = document.createElement('div');
@@ -244,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
             cartItem.innerHTML = `
                 <div class="cart-item-info">
                     <div class="cart-item-name">${product.name}</div>
-                    <div class="cart-item-price">R$ ${product.price.toFixed(2)} cada</div>
+                    <div class="cart-item-price">R$ ${parseFloat(product.price).toFixed(2)} cada</div>
                 </div>
                 <div class="cart-item-quantity">
                     <button class="quantity-btn decrease-btn" data-id="${product.id}">-</button>
@@ -259,12 +308,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Adicionar eventos aos botões
             const decreaseBtn = cartItem.querySelector('.decrease-btn');
             decreaseBtn.addEventListener('click', function() {
-                const productId = parseInt(this.getAttribute('data-id'));
+                const productId = this.getAttribute('data-id');
                 const cartItem = appData.cart.find(item => item.productId === productId);
                 if (cartItem && cartItem.quantity > 1) {
-                    updateCartItemQuantity(productId, cartItem.quantity - 1);
+                    cartManager.updateCartItemQuantity(productId, cartItem.quantity - 1);
                 } else {
-                    removeFromCart(productId);
+                    cartManager.removeFromCart(productId);
                 }
                 renderCart();
                 updateCartBadge();
@@ -272,10 +321,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const increaseBtn = cartItem.querySelector('.increase-btn');
             increaseBtn.addEventListener('click', function() {
-                const productId = parseInt(this.getAttribute('data-id'));
+                const productId = this.getAttribute('data-id');
                 const cartItem = appData.cart.find(item => item.productId === productId);
                 if (cartItem) {
-                    updateCartItemQuantity(productId, cartItem.quantity + 1);
+                    cartManager.updateCartItemQuantity(productId, cartItem.quantity + 1);
                     renderCart();
                     updateCartBadge();
                 }
@@ -283,8 +332,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const removeBtn = cartItem.querySelector('.remove-item-btn');
             removeBtn.addEventListener('click', function() {
-                const productId = parseInt(this.getAttribute('data-id'));
-                removeFromCart(productId);
+                const productId = this.getAttribute('data-id');
+                cartManager.removeFromCart(productId);
                 renderCart();
                 updateCartBadge();
             });
@@ -293,6 +342,85 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Atualizar total
-        cartTotalValue.textContent = `R$ ${getCartTotal().toFixed(2)}`;
+        const total = await cartManager.getCartTotal();
+        cartTotalValue.textContent = `R$ ${total.toFixed(2)}`;
     }
+
+    // Atualizar badge do carrinho
+    function updateCartBadge() {
+        if (!cartBadge) return;
+        
+        const totalItems = appData.cart.reduce((total, item) => total + item.quantity, 0);
+        cartBadge.textContent = totalItems;
+        
+        if (totalItems === 0) {
+            cartBadge.style.display = 'none';
+        } else {
+            cartBadge.style.display = 'flex';
+        }
+    }
+
+    // Função para enviar pedido via WhatsApp
+    async function sendOrderToWhatsApp() {
+        if (appData.cart.length === 0) {
+            alert('Seu carrinho está vazio. Adicione produtos antes de fazer o pedido.');
+            return false;
+        }
+        
+        // Obter todos os produtos para gerar a mensagem
+        const allProducts = await productManager.getProducts();
+        
+        let message = '🛒 *Novo Pedido - Mapeju Doces* 🛒\n\n';
+        message += '*Itens do Pedido:*\n';
+        
+        appData.cart.forEach(item => {
+            const product = allProducts.find(prod => prod.id === item.productId);
+            if (product) {
+                message += `• ${item.quantity}x ${product.name} - R$ ${(product.price * item.quantity).toFixed(2)}\n`;
+            }
+        });
+        
+        const total = await cartManager.getCartTotal();
+        message += `\n*Total: R$ ${total.toFixed(2)}*\n\n`;
+        message += 'Por favor, confirme meu pedido com os dados para entrega. Obrigado!';
+        
+        const whatsappUrl = `https://wa.me/556294535053?text=${encodeURIComponent(message)}`;
+        
+        // Abrir WhatsApp em nova janela
+        window.open(whatsappUrl, '_blank');
+        
+        // Mostrar confirmação
+        showOrderConfirmation();
+        
+        return true;
+    }
+
+    // Mostrar confirmação de pedido
+    function showOrderConfirmation() {
+        // Criar elemento de confirmação
+        const confirmationDiv = document.createElement('div');
+        confirmationDiv.className = 'order-confirmation';
+        confirmationDiv.innerHTML = `
+            <p><i class="fas fa-check-circle"></i> Seu pedido foi enviado para o WhatsApp!</p>
+            <p>Aguarde a confirmação da Mapeju Doces.</p>
+        `;
+        
+        // Adicionar ao carrinho
+        cartElement.appendChild(confirmationDiv);
+        
+        // Remover após 5 segundos
+        setTimeout(() => {
+            if (confirmationDiv.parentNode) {
+                confirmationDiv.parentNode.removeChild(confirmationDiv);
+            }
+        }, 5000);
+    }
+
+    // Expor funções globalmente
+    window.cardapioApp = {
+        renderCart,
+        updateCartBadge,
+        sendOrderToWhatsApp,
+        showOrderConfirmation
+    };
 });
