@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardápio Digital - Mapeju Doces</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/whatsapp.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <h1>Mapeju Doces</h1>
+                <p>Cardápio Digital</p>
+            </div>
+            <div class="admin-button">
+                <button id="admin-login-btn"><i class="fas fa-user-lock"></i> Área Administrativa</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="categories">
+                <!-- Categorias serão adicionadas dinamicamente via JavaScript -->
+            </div>
+
+            <div class="products">
+                <!-- Produtos serão adicionados dinamicamente via JavaScript -->
+                <div class="empty-message">
+                    <p>Selecione uma categoria para ver os produtos</p>
+                </div>
+            </div>
+
+            <div class="cart">
+                <button class="close-cart-btn" id="close-cart-btn"><i class="fas fa-times"></i></button>
+                <h2><i class="fas fa-shopping-cart"></i> Seu Pedido</h2>
+                <div class="cart-items">
+                    <!-- Itens do carrinho serão adicionados dinamicamente via JavaScript -->
+                    <div class="empty-cart">
+                        <p>Seu carrinho está vazio</p>
+                    </div>
+                </div>
+                <div class="cart-total">
+                    <p>Total: <span id="cart-total-value">R$ 0,00</span></p>
+                </div>
+                <div class="cart-buttons">
+                    <button id="clear-cart-btn" class="secondary-btn"><i class="fas fa-trash"></i> Limpar</button>
+                    <button id="order-btn" class="primary-btn"><i class="fab fa-whatsapp"></i> Fazer Pedido</button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Mapeju Doces - Todos os direitos reservados</p>
+        </footer>
+    </div>
+
+    <!-- Botão flutuante do carrinho para dispositivos móveis -->
+    <button class="floating-cart-btn" id="floating-cart-btn">
+        <i class="fas fa-shopping-cart"></i>
+        <span class="cart-badge" id="cart-badge">0</span>
+    </button>
+
+    <!-- Modal de Login Administrativo -->
+    <div id="admin-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Área Administrativa</h2>
+            <form id="admin-login-form">
+                <div class="form-group">
+                    <label for="password">Senha:</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="primary-btn">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Painel Administrativo (inicialmente oculto) -->
+    <div id="admin-panel" class="admin-panel">
+        <div class="admin-header">
+            <h2>Painel Administrativo</h2>
+            <button id="admin-logout-btn" class="secondary-btn"><i class="fas fa-sign-out-alt"></i> Sair</button>
+        </div>
+        
+        <div class="admin-tabs">
+            <button class="tab-btn active" data-tab="categories">Categorias</button>
+            <button class="tab-btn" data-tab="products">Produtos</button>
+        </div>
+        
+        <div class="admin-content">
+            <!-- Gerenciamento de Categorias -->
+            <div id="categories-tab" class="tab-content active">
+                <h3>Gerenciar Categorias</h3>
+                <form id="category-form">
+                    <div class="form-group">
+                        <label for="category-name">Nome da Categoria:</label>
+                        <input type="text" id="category-name" required>
+                    </div>
+                    <button type="submit" class="primary-btn">Adicionar Categoria</button>
+                </form>
+                
+                <div class="category-list">
+                    <h4>Categorias Existentes</h4>
+                    <ul id="admin-category-list">
+                        <!-- Categorias serão adicionadas dinamicamente via JavaScript -->
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Gerenciamento de Produtos -->
+            <div id="products-tab" class="tab-content">
+                <h3>Gerenciar Produtos</h3>
+                <form id="product-form">
+                    <div class="form-group">
+                        <label for="product-category">Categoria:</label>
+                        <select id="product-category" required>
+                            <!-- Opções serão adicionadas dinamicamente via JavaScript -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-name">Nome do Produto:</label>
+                        <input type="text" id="product-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-description">Descrição:</label>
+                        <textarea id="product-description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-price">Preço (R$):</label>
+                        <input type="number" id="product-price" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-image">URL da Imagem (opcional):</label>
+                        <input type="text" id="product-image" placeholder="https://exemplo.com/imagem.jpg">
+                    </div>
+                    <button type="submit" class="primary-btn">Adicionar Produto</button>
+                </form>
+                
+                <div class="product-list">
+                    <h4>Produtos Existentes</h4>
+                    <div id="admin-product-list">
+                        <!-- Produtos serão adicionados dinamicamente via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/whatsapp.js"></script>
+</body>
+</html>
