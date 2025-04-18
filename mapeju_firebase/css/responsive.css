@@ -1,0 +1,35 @@
+/* Estilos responsivos */
+@media screen and (max-width: 768px) {
+    .container {
+        width: 100%;
+        padding: 0 15px;
+    }
+
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .product-card {
+        width: 100%;
+    }
+
+    .cart-container {
+        width: 100%;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .product-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .category-list {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+} 

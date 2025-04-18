@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-import { getFirestore, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+import { getFirestore, collection, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -16,22 +16,20 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// Update persistence configuration
-await db.enablePersistence({
-  synchronizeTabs: true,
-  cache: 'default'
-}).catch((err) => {
-  if (err.code == 'failed-precondition') {
-    console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-  } else if (err.code == 'unimplemented') {
-    console.log('The current browser does not support persistence.');
-  }
+// Habilitar persistência offline
+enableIndexedDbPersistence(db)
+  .catch((err) => {
+    if (err.code == 'failed-precondition') {
+      console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+    } else if (err.code == 'unimplemented') {
+      console.log('The current browser does not support persistence.');
+    }
 });
 
 // Configurar coleções do Firestore
-const categoriesRef = db.collection('categories');
-const productsRef = db.collection('products');
-const cartsRef = db.collection('carts');
+const categoriesRef = collection(db, 'categories');
+const productsRef = collection(db, 'products');
+const cartsRef = collection(db, 'carts');
 
 // Função para criar um ID único
 function generateId() {
@@ -77,9 +75,6 @@ function showNotification(message, type = 'info') {
 
 // Verificar estado de autenticação
 auth.onAuthStateChanged(function(user) {
-  console.log("auth.onAuthStateChanged chamado"); // Inserir log aqui - Inicio da função
-  console.log("Valor de user:", user); // Inserir log aqui - Verificar o objeto 'user'
-
   const adminPanel = document.getElementById('admin-panel');
   const adminLoginBtn = document.getElementById('admin-login-btn');
   
@@ -94,8 +89,6 @@ auth.onAuthStateChanged(function(user) {
     }
     
     // Mostrar painel administrativo se o botão for clicado
-    console.log("Usuário está logado - dentro do IF"); // Inserir log aqui - Usuario está logado
-
     if (adminLoginBtn) {
       adminLoginBtn.addEventListener('click', function() {
         if (adminPanel) {
@@ -106,8 +99,6 @@ auth.onAuthStateChanged(function(user) {
   } else {
     // Usuário não está logado
     console.log('Usuário não autenticado');
-
-        console.log("Usuário não está logado - dentro do ELSE"); // Inserir log aqui - Usuario não está logado
 
     // Configurar botão para abrir modal de login
     if (adminLoginBtn) {
@@ -121,4 +112,4 @@ auth.onAuthStateChanged(function(user) {
   }
 });
 
-export { db, auth };
+export { db, auth, categoriesRef, productsRef, cartsRef, generateId, showNotification };

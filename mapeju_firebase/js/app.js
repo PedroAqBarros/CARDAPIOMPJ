@@ -260,85 +260,88 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Renderizar carrinho
     async function renderCart() {
-        // Limpar conteúdo atual
-        cartItemsContainer.innerHTML = '';
+        if (!cartItemsContainer) return;
         
-        // Verificar se o carrinho está vazio
+        cartItemsContainer.innerHTML = '';
+        let total = 0;
+        
         if (appData.cart.length === 0) {
-            cartItemsContainer.innerHTML = `
-                <div class="empty-cart">
-                    <p>Seu carrinho está vazio</p>
-                </div>
-            `;
-            cartTotalValue.textContent = 'R$ 0,00';
+            cartItemsContainer.innerHTML = '<p class="empty-cart">Seu carrinho está vazio</p>';
+            if (cartTotalValue) {
+                cartTotalValue.textContent = 'R$ 0,00';
+            }
             return;
         }
         
-        // Obter todos os produtos para renderizar o carrinho
+        // Obter todos os produtos para poder exibir informações no carrinho
         const allProducts = await productManager.getProducts();
         
-        // Renderizar itens do carrinho
         appData.cart.forEach(item => {
             const product = allProducts.find(prod => prod.id === item.productId);
-            if (!product) return;
-            
-            const cartItem = document.createElement('div');
-            cartItem.className = 'cart-item';
-            
-            cartItem.innerHTML = `
-                <div class="cart-item-info">
-                    <div class="cart-item-name">${product.name}</div>
-                    <div class="cart-item-price">R$ ${parseFloat(product.price).toFixed(2)} cada</div>
-                </div>
-                <div class="cart-item-quantity">
-                    <button class="quantity-btn decrease-btn" data-id="${product.id}">-</button>
-                    <span>${item.quantity}</span>
-                    <button class="quantity-btn increase-btn" data-id="${product.id}">+</button>
-                    <button class="remove-item-btn" data-id="${product.id}">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
-            
-            // Adicionar eventos aos botões
-            const decreaseBtn = cartItem.querySelector('.decrease-btn');
-            decreaseBtn.addEventListener('click', function() {
-                const productId = this.getAttribute('data-id');
-                const cartItem = appData.cart.find(item => item.productId === productId);
-                if (cartItem && cartItem.quantity > 1) {
-                    cartManager.updateCartItemQuantity(productId, cartItem.quantity - 1);
-                } else {
-                    cartManager.removeFromCart(productId);
-                }
-                renderCart();
-                updateCartBadge();
-            });
-            
-            const increaseBtn = cartItem.querySelector('.increase-btn');
-            increaseBtn.addEventListener('click', function() {
-                const productId = this.getAttribute('data-id');
-                const cartItem = appData.cart.find(item => item.productId === productId);
-                if (cartItem) {
-                    cartManager.updateCartItemQuantity(productId, cartItem.quantity + 1);
+            if (product) {
+                const itemTotal = product.price * item.quantity;
+                total += itemTotal;
+                
+                const cartItem = document.createElement('div');
+                cartItem.className = 'cart-item';
+                cartItem.innerHTML = `
+                    <div class="cart-item-info">
+                        <h4>${product.name}</h4>
+                        <p>R$ ${product.price.toFixed(2)} x ${item.quantity}</p>
+                    </div>
+                    <div class="cart-item-total">
+                        R$ ${itemTotal.toFixed(2)}
+                    </div>
+                    <div class="cart-item-actions">
+                        <button class="quantity-btn minus" data-id="${item.productId}">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <span class="quantity">${item.quantity}</span>
+                        <button class="quantity-btn plus" data-id="${item.productId}">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="remove-btn" data-id="${item.productId}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                
+                // Adicionar eventos aos botões
+                const minusBtn = cartItem.querySelector('.minus');
+                const plusBtn = cartItem.querySelector('.plus');
+                const removeBtn = cartItem.querySelector('.remove-btn');
+                
+                minusBtn.addEventListener('click', function() {
+                    const productId = this.getAttribute('data-id');
+                    cartManager.decreaseQuantity(productId);
                     renderCart();
                     updateCartBadge();
-                }
-            });
-            
-            const removeBtn = cartItem.querySelector('.remove-item-btn');
-            removeBtn.addEventListener('click', function() {
-                const productId = this.getAttribute('data-id');
-                cartManager.removeFromCart(productId);
-                renderCart();
-                updateCartBadge();
-            });
-            
-            cartItemsContainer.appendChild(cartItem);
+                });
+                
+                plusBtn.addEventListener('click', function() {
+                    const productId = this.getAttribute('data-id');
+                    cartManager.addToCart(productId);
+                    renderCart();
+                    updateCartBadge();
+                });
+                
+                removeBtn.addEventListener('click', function() {
+                    const productId = this.getAttribute('data-id');
+                    if (confirm('Tem certeza que deseja remover este item?')) {
+                        cartManager.removeFromCart(productId);
+                        renderCart();
+                        updateCartBadge();
+                    }
+                });
+                
+                cartItemsContainer.appendChild(cartItem);
+            }
         });
         
         // Atualizar total
-        const total = await cartManager.getCartTotal();
-        cartTotalValue.textContent = `R$ ${total.toFixed(2)}`;
+        if (cartTotalValue) {
+            cartTotalValue.textContent = `R$ ${total.toFixed(2)}`;
+        }
     }
 
     // Atualizar badge do carrinho
@@ -364,6 +367,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Obter todos os produtos para gerar a mensagem
         const allProducts = await productManager.getProducts();
+        let total = 0;
         
         let message = '🛒 *Novo Pedido - Mapeju Doces* 🛒\n\n';
         message += '*Itens do Pedido:*\n';
@@ -371,11 +375,12 @@ document.addEventListener('DOMContentLoaded', function() {
         appData.cart.forEach(item => {
             const product = allProducts.find(prod => prod.id === item.productId);
             if (product) {
-                message += `• ${item.quantity}x ${product.name} - R$ ${(product.price * item.quantity).toFixed(2)}\n`;
+                const itemTotal = product.price * item.quantity;
+                total += itemTotal;
+                message += `• ${item.quantity}x ${product.name} - R$ ${itemTotal.toFixed(2)}\n`;
             }
         });
         
-        const total = await cartManager.getCartTotal();
         message += `\n*Total: R$ ${total.toFixed(2)}*\n\n`;
         message += 'Por favor, confirme meu pedido com os dados para entrega. Obrigado!';
         

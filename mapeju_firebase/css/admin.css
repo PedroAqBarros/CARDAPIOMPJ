@@ -1,0 +1,56 @@
+/* Estilos da área administrativa */
+.admin-panel {
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.admin-section {
+    margin-bottom: 30px;
+}
+
+.admin-form {
+    display: grid;
+    gap: 15px;
+}
+
+.admin-form input,
+.admin-form select,
+.admin-form textarea {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.admin-button {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.admin-button:hover {
+    background: #c82333;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+} 
