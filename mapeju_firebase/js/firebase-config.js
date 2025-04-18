@@ -1,5 +1,7 @@
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+import { getFirestore, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyBzGL3MFuCDUUmR8rY1eshqB8S5SRKBVZI",
   authDomain: "mapeju-cardapio.firebaseapp.com",
@@ -10,24 +12,21 @@ const firebaseConfig = {
   measurementId: "G-00FD2KZEGE"
 };
 
-// Inicializar Firebase
-firebase.initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-// Referências para serviços do Firebase
-const db = firebase.firestore();
-const auth = firebase.auth();
-
-// Configurar persistência para funcionamento offline
-db.enablePersistence()
-  .catch((err) => {
-    if (err.code == 'failed-precondition') {
-      // Múltiplas abas abertas, persistência só pode ser habilitada em uma aba por vez
-      console.log('Persistência falhou: múltiplas abas abertas');
-    } else if (err.code == 'unimplemented') {
-      // O navegador atual não suporta todos os recursos necessários
-      console.log('Persistência não é suportada neste navegador');
-    }
-  });
+// Update persistence configuration
+await db.enablePersistence({
+  synchronizeTabs: true,
+  cache: 'default'
+}).catch((err) => {
+  if (err.code == 'failed-precondition') {
+    console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+  } else if (err.code == 'unimplemented') {
+    console.log('The current browser does not support persistence.');
+  }
+});
 
 // Configurar coleções do Firestore
 const categoriesRef = db.collection('categories');
@@ -121,3 +120,5 @@ auth.onAuthStateChanged(function(user) {
     }
   }
 });
+
+export { db, auth };
