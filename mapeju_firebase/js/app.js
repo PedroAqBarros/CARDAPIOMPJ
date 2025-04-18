@@ -15,15 +15,133 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeCartBtn = document.getElementById('close-cart-btn');
     const categoriesLoading = document.getElementById('categories-loading');
 
+    // Referenciar objetos do Firebase vindos da API compat
+    const { db, auth, categoriesRef, productsRef, cartsRef, generateId, showNotification } = window.appFirebase;
+
     // Variáveis para controle de estado
     let selectedCategoryId = null;
     let categoriesListener = null;
     let productsListener = null;
+    
+    // Dados da aplicação
+    const appData = {
+        cart: []
+    };
+
+    // Gerenciador de produtos
+    const productManager = {
+        async getProducts() {
+            try {
+                const snapshot = await productsRef.get();
+                return snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+            } catch (error) {
+                console.error('Erro ao obter produtos:', error);
+                return [];
+            }
+        }
+    };
+
+    // Gerenciador de carrinho
+    const cartManager = {
+        addToCart(productId) {
+            const existingItem = appData.cart.find(item => item.productId === productId);
+            
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                appData.cart.push({
+                    productId,
+                    quantity: 1
+                });
+            }
+            
+            // Salvar carrinho no localStorage
+            this.saveCart();
+            
+            return appData.cart;
+        },
+        
+        decreaseQuantity(productId) {
+            const existingItem = appData.cart.find(item => item.productId === productId);
+            
+            if (existingItem) {
+                if (existingItem.quantity > 1) {
+                    existingItem.quantity -= 1;
+                } else {
+                    // Remover item se a quantidade for 1
+                    this.removeFromCart(productId);
+                    return appData.cart;
+                }
+                
+                // Salvar carrinho no localStorage
+                this.saveCart();
+            }
+            
+            return appData.cart;
+        },
+        
+        removeFromCart(productId) {
+            appData.cart = appData.cart.filter(item => item.productId !== productId);
+            
+            // Salvar carrinho no localStorage
+            this.saveCart();
+            
+            return appData.cart;
+        },
+        
+        clearCart() {
+            appData.cart = [];
+            
+            // Salvar carrinho no localStorage
+            this.saveCart();
+            
+            return appData.cart;
+        },
+        
+        loadCart() {
+            const savedCart = localStorage.getItem('mapeju_cart');
+            
+            if (savedCart) {
+                try {
+                    appData.cart = JSON.parse(savedCart);
+                } catch (error) {
+                    console.error('Erro ao carregar carrinho:', error);
+                    appData.cart = [];
+                }
+            }
+            
+            return appData.cart;
+        },
+        
+        saveCart() {
+            localStorage.setItem('mapeju_cart', JSON.stringify(appData.cart));
+        },
+        
+        async getCartTotal() {
+            // Obter todos os produtos para calcular o total
+            const allProducts = await productManager.getProducts();
+            
+            // Calcular total do carrinho
+            return appData.cart.reduce((total, item) => {
+                const product = allProducts.find(prod => prod.id === item.productId);
+                if (product) {
+                    return total + (product.price * item.quantity);
+                }
+                return total;
+            }, 0);
+        }
+    };
 
     // Inicializar a aplicação
     initApp();
 
     async function initApp() {
+        // Carregar carrinho do localStorage
+        cartManager.loadCart();
+        
         // Configurar eventos
         setupEventListeners();
         
@@ -209,16 +327,20 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Imagem em base64 minimalista (1x1 pixel transparente)
+        const fallbackImage = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        
         products.forEach(product => {
             const productCard = document.createElement('div');
             productCard.className = 'product-card';
             
-            const imageUrl = product.image || 'img/default-product.jpg';
+            // Usar a imagem base64 como fallback
+            const imageUrl = product.image || fallbackImage;
             
             productCard.innerHTML = `
                 <div class="product-image-container">
                     <img src="${imageUrl}" alt="${product.name}" class="product-image" 
-                         onerror="this.onerror=null; this.src='img/default-product.jpg'">
+                         onerror="this.src='${fallbackImage}'">
                 </div>
                 <div class="product-info">
                     <h3 class="product-name">${product.name}</h3>
@@ -367,7 +489,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Obter todos os produtos para gerar a mensagem
         const allProducts = await productManager.getProducts();
-        let total = 0;
+        
+        // Variável total já é calculada no loop abaixo
+        let totalPedido = 0;
         
         let message = '🛒 *Novo Pedido - Mapeju Doces* 🛒\n\n';
         message += '*Itens do Pedido:*\n';
@@ -376,18 +500,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const product = allProducts.find(prod => prod.id === item.productId);
             if (product) {
                 const itemTotal = product.price * item.quantity;
-                total += itemTotal;
+                totalPedido += itemTotal;
                 message += `• ${item.quantity}x ${product.name} - R$ ${itemTotal.toFixed(2)}\n`;
             }
         });
         
-        message += `\n*Total: R$ ${total.toFixed(2)}*\n\n`;
+        message += `\n*Total: R$ ${totalPedido.toFixed(2)}*\n\n`;
         message += 'Por favor, confirme meu pedido com os dados para entrega. Obrigado!';
         
         const whatsappUrl = `https://wa.me/556294535053?text=${encodeURIComponent(message)}`;
         
-        // Abrir WhatsApp em nova janela
-        window.open(whatsappUrl, '_blank');
+        // Abrir WhatsApp em nova janela com propriedades seguras para evitar CORB
+        const newWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+        if (newWindow) {
+            newWindow.opener = null;
+        }
         
         // Mostrar confirmação
         showOrderConfirmation();
@@ -423,4 +550,28 @@ document.addEventListener('DOMContentLoaded', function() {
         sendOrderToWhatsApp,
         showOrderConfirmation
     };
+
+    // Gerenciar modal de política de privacidade
+    const privacyLink = document.getElementById('privacy-link');
+    const privacyModal = document.getElementById('privacy-modal');
+    const privacyClose = document.querySelector('.privacy-close');
+    
+    if (privacyLink && privacyModal) {
+        privacyLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            privacyModal.style.display = 'block';
+        });
+        
+        if (privacyClose) {
+            privacyClose.addEventListener('click', function() {
+                privacyModal.style.display = 'none';
+            });
+        }
+        
+        window.addEventListener('click', function(e) {
+            if (e.target === privacyModal) {
+                privacyModal.style.display = 'none';
+            }
+        });
+    }
 });

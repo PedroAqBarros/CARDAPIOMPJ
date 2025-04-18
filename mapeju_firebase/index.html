@@ -2,13 +2,655 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
     <title>Cardápio Digital - Mapeju Doces</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/responsive.css">
-    <link rel="stylesheet" href="css/admin.css">
-    <link rel="stylesheet" href="css/whatsapp.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Estilos incorporados -->
+    <style>
+    /* Estilos gerais */
+    :root {
+        --primary-color: #dc3545;
+        --secondary-color: #6c757d;
+        --background-color: #f8f9fa;
+        --text-color: #343a40;
+        --border-color: #dee2e6;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+        font-family: 'Arial', sans-serif;
+        line-height: 1.6;
+        color: var(--text-color);
+        background-color: var(--background-color);
+        font-size: 16px;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 10px;
+    }
+
+    /* Header */
+    header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .logo h1 {
+        color: var(--primary-color);
+        font-size: 1.8em;
+    }
+
+    .logo p {
+        color: var(--secondary-color);
+        font-size: 1rem;
+    }
+
+    /* Categorias */
+    .categories {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+        overflow-x: auto;
+        padding-bottom: 5px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .category-btn {
+        padding: 10px 15px;
+        border: 1px solid var(--primary-color);
+        background: white;
+        color: var(--primary-color);
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        font-size: 0.9rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .category-btn:hover,
+    .category-btn.active {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    /* Produtos */
+    .products {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .product-card {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .product-card:hover {
+        transform: translateY(-3px);
+    }
+
+    .product-image-container {
+        width: 100%;
+        height: 140px;
+        overflow: hidden;
+        position: relative;
+        background-color: #f0f0f0;
+    }
+
+    .product-image-container::after {
+        content: 'Imagem não disponível';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 12px;
+        color: #666;
+    }
+
+    .product-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        position: relative;
+        z-index: 1;
+    }
+
+    .product-info {
+        padding: 10px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .product-name {
+        font-size: 1em;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+
+    .product-description {
+        color: var(--secondary-color);
+        margin-bottom: 8px;
+        font-size: 0.8em;
+        flex-grow: 1;
+    }
+
+    .product-price {
+        font-weight: bold;
+        color: var(--primary-color);
+        margin-bottom: 10px;
+        font-size: 1.1em;
+    }
+
+    /* Carrinho */
+    .cart {
+        position: fixed;
+        top: 0;
+        right: -90%;
+        width: 90%;
+        height: 100vh;
+        background: white;
+        padding: 15px;
+        box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+        transition: right 0.3s ease;
+        z-index: 1000;
+        overflow-y: auto;
+    }
+
+    .cart.open {
+        right: 0;
+    }
+
+    .cart h2 {
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 1.2rem;
+    }
+
+    .cart-items {
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+    }
+
+    .cart-item {
+        display: flex;
+        flex-direction: column;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .cart-item-info {
+        margin-bottom: 8px;
+    }
+
+    .cart-item-info h4 {
+        font-size: 1rem;
+        margin-bottom: 2px;
+    }
+
+    .cart-item-total {
+        font-weight: bold;
+        margin: 5px 0;
+    }
+
+    .cart-item-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .cart-total {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid var(--border-color);
+        font-weight: bold;
+    }
+
+    /* Botões */
+    .primary-btn,
+    .secondary-btn,
+    .add-to-cart-btn {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+    }
+
+    .primary-btn {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .secondary-btn {
+        background: var(--secondary-color);
+        color: white;
+    }
+
+    .add-to-cart-btn {
+        width: 100%;
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .add-to-cart-btn:hover {
+        background: #c82333;
+    }
+
+    .quantity-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        font-size: 1rem;
+    }
+
+    .close-cart-btn {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+
+    .remove-btn {
+        background: none;
+        border: none;
+        color: var(--danger-color);
+        cursor: pointer;
+    }
+
+    /* Floating cart button */
+    .floating-cart-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 24px;
+        z-index: 999;
+    }
+
+    .cart-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #28a745;
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        font-size: 12px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Área administrativa */
+    .admin-button button {
+        background: transparent;
+        border: 1px solid var(--primary-color);
+        color: var(--primary-color);
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+
+    /* Modais */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        overflow-y: auto;
+    }
+
+    .modal-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 20px;
+        border-radius: 8px;
+        max-width: 90%;
+        width: 100%;
+        position: relative;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .close {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        color: #aaa;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .close:hover {
+        color: black;
+    }
+
+    /* Formulários */
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+    }
+
+    .form-group input, 
+    .form-group textarea, 
+    .form-group select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 1rem;
+    }
+
+    /* Painel Administrativo */
+    .admin-panel {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: white;
+        z-index: 2000;
+        overflow-y: auto;
+        padding: 15px;
+    }
+
+    .admin-header {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .admin-header h2 {
+        margin-bottom: 10px;
+        font-size: 1.3rem;
+    }
+
+    .admin-user-info {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9rem;
+    }
+
+    .admin-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        overflow-x: auto;
+        padding-bottom: 5px;
+    }
+
+    .tab-btn {
+        padding: 8px 15px;
+        background-color: #f8f9fa;
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        cursor: pointer;
+        white-space: nowrap;
+        font-size: 0.9rem;
+    }
+
+    .tab-btn.active {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .tab-content h3 {
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+    }
+
+    /* Notificações */
+    .notification {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 12px 15px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        z-index: 1001;
+        animation: slideUp 0.3s ease;
+        max-width: 90%;
+        width: auto;
+    }
+
+    @keyframes slideUp {
+        from { transform: translate(-50%, 100%); opacity: 0; }
+        to { transform: translate(-50%, 0); opacity: 1; }
+    }
+
+    /* Estilos responsivos */
+    @media screen and (min-width: 768px) {
+        .cart {
+            width: 400px;
+            right: -400px;
+        }
+        
+        .cart-item {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .products {
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        }
+        
+        .admin-header {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-content {
+            max-width: 500px;
+        }
+    }
+
+    @media screen and (max-width: 480px) {
+        .container {
+            padding: 10px;
+        }
+        
+        .logo h1 {
+            font-size: 1.5em;
+        }
+        
+        .logo p {
+            font-size: 0.9rem;
+        }
+        
+        .product-name {
+            font-size: 0.9em;
+        }
+        
+        .product-price {
+            font-size: 1em;
+        }
+        
+        .category-btn {
+            padding: 8px 12px;
+            font-size: 0.8rem;
+        }
+        
+        .form-group input, 
+        .form-group textarea, 
+        .form-group select {
+            padding: 10px;
+        }
+    }
+
+    /* Footer */
+    footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+        text-align: center;
+    }
+
+    /* Ordenação de produtos */
+    .sort-controls {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 10px;
+        gap: 5px;
+    }
+
+    .sort-button {
+        padding: 5px 10px;
+        background: transparent;
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+
+    .sort-button.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    /* Loading spinner */
+    .loading-spinner {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        color: var(--secondary-color);
+    }
+
+    .loading-spinner i {
+        margin-right: 8px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* Empty states */
+    .empty-message,
+    .empty-cart {
+        text-align: center;
+        padding: 20px;
+        color: var(--secondary-color);
+        font-size: 0.9rem;
+    }
+
+    /* Modal de Política de Privacidade */
+    .privacy-content {
+        max-height: 60vh;
+        overflow-y: auto;
+        padding: 10px 0;
+        line-height: 1.6;
+        font-size: 0.9rem;
+    }
+
+    .privacy-content h3 {
+        margin: 15px 0 10px 0;
+        font-size: 1rem;
+    }
+
+    .privacy-content ul {
+        padding-left: 20px;
+        margin-bottom: 15px;
+    }
+
+    .privacy-content li {
+        margin-bottom: 5px;
+    }
+
+    .cookie-notice {
+        font-size: 0.8rem !important;
+        color: #666;
+        margin-top: 10px;
+        padding: 0 15px;
+    }
+    </style>
     
     <!-- Firebase App (the core Firebase SDK) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -65,6 +707,10 @@
 
         <footer>
             <p>&copy; 2025 Mapeju Doces - Todos os direitos reservados</p>
+            <p class="cookie-notice" style="font-size: 0.8em; color: #666; margin-top: 10px;">
+                Este site utiliza cookies para melhorar sua experiência. Ao continuar navegando, 
+                você concorda com nossa <a href="#" id="privacy-link" style="color: #dc3545;">Política de Privacidade</a>.
+            </p>
         </footer>
     </div>
 
@@ -79,14 +725,14 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2>Área Administrativa</h2>
-            <form id="admin-login-form">
+            <form id="admin-login-form" autocomplete="on">
                 <div class="form-group">
                     <label for="email">Email:</label>
-                    <input type="email" id="email" required>
+                    <input type="email" id="email" name="email" autocomplete="email" required>
                 </div>
                 <div class="form-group">
                     <label for="password">Senha:</label>
-                    <input type="password" id="password" required>
+                    <input type="password" id="password" name="password" autocomplete="current-password" required>
                 </div>
                 <button type="submit" class="primary-btn">Entrar</button>
             </form>
@@ -112,10 +758,10 @@
             <!-- Gerenciamento de Categorias -->
             <div id="categories-tab" class="tab-content active">
                 <h3>Gerenciar Categorias</h3>
-                <form id="category-form">
+                <form id="category-form" autocomplete="off">
                     <div class="form-group">
                         <label for="category-name">Nome da Categoria:</label>
-                        <input type="text" id="category-name" required>
+                        <input type="text" id="category-name" name="category-name" autocomplete="off" required>
                     </div>
                     <button type="submit" class="primary-btn">Adicionar Categoria</button>
                 </form>
@@ -134,28 +780,28 @@
             <!-- Gerenciamento de Produtos -->
             <div id="products-tab" class="tab-content">
                 <h3>Gerenciar Produtos</h3>
-                <form id="product-form">
+                <form id="product-form" autocomplete="off">
                     <div class="form-group">
                         <label for="product-category">Categoria:</label>
-                        <select id="product-category" required>
+                        <select id="product-category" name="product-category" autocomplete="off" required>
                             <!-- Opções serão adicionadas dinamicamente via JavaScript -->
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="product-name">Nome do Produto:</label>
-                        <input type="text" id="product-name" required>
+                        <input type="text" id="product-name" name="product-name" autocomplete="off" required>
                     </div>
                     <div class="form-group">
                         <label for="product-description">Descrição:</label>
-                        <textarea id="product-description" rows="3"></textarea>
+                        <textarea id="product-description" name="product-description" rows="3" autocomplete="off"></textarea>
                     </div>
                     <div class="form-group">
                         <label for="product-price">Preço (R$):</label>
-                        <input type="number" id="product-price" step="0.01" min="0" required>
+                        <input type="number" id="product-price" name="product-price" step="0.01" min="0" autocomplete="off" required>
                     </div>
                     <div class="form-group">
                         <label for="product-image">URL da Imagem (opcional):</label>
-                        <input type="text" id="product-image" placeholder="https://exemplo.com/imagem.jpg">
+                        <input type="text" id="product-image" name="product-image" autocomplete="off" placeholder="https://exemplo.com/imagem.jpg">
                     </div>
                     <button type="submit" class="primary-btn">Adicionar Produto</button>
                 </form>
@@ -173,9 +819,32 @@
         </div>
     </div>
 
+    <!-- Modal Política de Privacidade -->
+    <div id="privacy-modal" class="modal">
+        <div class="modal-content">
+            <span class="close privacy-close">&times;</span>
+            <h2>Política de Privacidade</h2>
+            <div class="privacy-content">
+                <p>A Mapeju Doces utiliza cookies e tecnologias semelhantes para melhorar a experiência do usuário.</p>
+                <h3>Tipos de Cookies que utilizamos:</h3>
+                <ul>
+                    <li><strong>Cookies essenciais:</strong> necessários para o funcionamento básico do site.</li>
+                    <li><strong>Cookies de análise:</strong> nos ajudam a entender como os visitantes interagem com o site.</li>
+                    <li><strong>Cookies de terceiros:</strong> fornecidos por serviços externos como Firebase, Google Analytics e outros.</li>
+                </ul>
+                <p>Para saber mais sobre como o Google utiliza cookies de terceiros, visite: 
+                   <a href="https://developers.google.com/privacy/changes-to-3p-cookies" target="_blank" rel="noopener noreferrer">
+                     Mudanças no tratamento de cookies de terceiros pelo Google Chrome
+                   </a>
+                </p>
+                <p>Qualquer questão sobre nossa política de privacidade pode ser direcionada para: contato@mapeju.com.br</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Update script imports -->
-    <script type="module" src="js/firebase-config.js"></script>
-    <script type="module" src="js/app.js"></script>
-    <script type="module" src="js/whatsapp.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/whatsapp.js"></script>
 </body>
 </html>

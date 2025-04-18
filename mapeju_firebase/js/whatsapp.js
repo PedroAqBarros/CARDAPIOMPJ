@@ -1,5 +1,6 @@
-export function sendWhatsAppMessage(cartItems, total) {
-    const phoneNumber = "5585996226262"; // Replace with your WhatsApp number
+// Integração com WhatsApp
+function sendWhatsAppMessage(cartItems, total) {
+    const phoneNumber = "5585996226262"; // Número do WhatsApp
     let message = "Novo Pedido:\n\n";
     
     cartItems.forEach(item => {
@@ -11,5 +12,22 @@ export function sendWhatsAppMessage(cartItems, total) {
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
     
-    window.open(whatsappUrl, '_blank');
+    // Abrir em nova janela com rel=noopener para evitar problemas CORB
+    const newWindow = window.open(whatsappUrl, '_blank');
+    if (newWindow) {
+        newWindow.opener = null;
+    }
 }
+
+// Adicionar botões de pedido rápido para produtos
+function addQuickOrderButtons() {
+    document.querySelectorAll('.product-card').forEach(card => {
+        // Implementar no futuro se necessário
+    });
+}
+
+// Disponibilizar função globalmente
+window.whatsappIntegration = {
+    sendWhatsAppMessage,
+    addQuickOrderButtons
+};

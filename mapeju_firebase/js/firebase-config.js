@@ -1,7 +1,11 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-import { getFirestore, collection, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+// Configuração do Firebase usando a API compat
+// Importação não utilizada, apenas referência para documentação
+// Neste arquivo usamos o método compat que não precisa de importação com import
+// import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+// import { getFirestore, collection, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+// import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
+// Configuração do Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyBzGL3MFuCDUUmR8rY1eshqB8S5SRKBVZI",
   authDomain: "mapeju-cardapio.firebaseapp.com",
@@ -12,24 +16,24 @@ const firebaseConfig = {
   measurementId: "G-00FD2KZEGE"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+// Inicializar o Firebase
+firebase.initializeApp(firebaseConfig);
 
-// Habilitar persistência offline
-enableIndexedDbPersistence(db)
-  .catch((err) => {
-    if (err.code == 'failed-precondition') {
-      console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-    } else if (err.code == 'unimplemented') {
-      console.log('The current browser does not support persistence.');
-    }
+// Obter instâncias do Firestore e Auth
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+// Configurar Firestore para persistência offline usando apenas cache settings
+// sem chamar enableIndexedDbPersistence que está sendo descontinuado
+db.settings({
+  cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
+  merge: true
 });
 
 // Configurar coleções do Firestore
-const categoriesRef = collection(db, 'categories');
-const productsRef = collection(db, 'products');
-const cartsRef = collection(db, 'carts');
+const categoriesRef = db.collection('categories');
+const productsRef = db.collection('products');
+const cartsRef = db.collection('carts');
 
 // Função para criar um ID único
 function generateId() {
@@ -97,7 +101,7 @@ auth.onAuthStateChanged(function(user) {
       });
     }
   } else {
-    // Usuário não está logado
+    // Usuário não autenticado
     console.log('Usuário não autenticado');
 
     // Configurar botão para abrir modal de login
@@ -112,4 +116,13 @@ auth.onAuthStateChanged(function(user) {
   }
 });
 
-export { db, auth, categoriesRef, productsRef, cartsRef, generateId, showNotification };
+// Disponibilizar objetos e funções globalmente
+window.appFirebase = {
+  db,
+  auth,
+  categoriesRef,
+  productsRef,
+  cartsRef,
+  generateId,
+  showNotification
+};
