@@ -213,18 +213,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const productCard = document.createElement('div');
             productCard.className = 'product-card';
             
-            // Verificar se a imagem existe
             const imageUrl = product.image || 'img/default-product.jpg';
             
-            let imageHtml = '';
-            if (imageUrl) {
-                imageHtml = `<img src="${imageUrl}" alt="${product.name}" class="product-image" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'product-image-placeholder\\'><i class=\\'fas fa-cookie\\'></i></div>'">`;
-            } else {
-                imageHtml = `<div class="product-image-placeholder"><i class="fas fa-cookie"></i></div>`;
-            }
-            
             productCard.innerHTML = `
-                ${imageHtml}
+                <div class="product-image-container">
+                    <img src="${imageUrl}" alt="${product.name}" class="product-image" 
+                         onerror="this.onerror=null; this.src='img/default-product.jpg'">
+                </div>
                 <div class="product-info">
                     <h3 class="product-name">${product.name}</h3>
                     <p class="product-description">${product.description || ''}</p>
