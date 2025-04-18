@@ -1,12 +1,13 @@
-// Configuração do Firebase
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  // Você precisará substituir estas configurações pelas suas próprias após criar o projeto no Firebase
-  apiKey: "SUBSTITUA_PELA_SUA_API_KEY",
+  apiKey: "AIzaSyBzGL3MFuCDUUmR8rY1eshqB8S5SRKBVZI",
   authDomain: "mapeju-cardapio.firebaseapp.com",
   projectId: "mapeju-cardapio",
-  storageBucket: "mapeju-cardapio.appspot.com",
-  messagingSenderId: "SUBSTITUA_PELO_SEU_MESSAGING_SENDER_ID",
-  appId: "SUBSTITUA_PELO_SEU_APP_ID"
+  storageBucket: "mapeju-cardapio.firebasestorage.app",
+  messagingSenderId: "1055368224770",
+  appId: "1:1055368224770:web:f3a5771fc333f192a3071b",
+  measurementId: "G-00FD2KZEGE"
 };
 
 // Inicializar Firebase
