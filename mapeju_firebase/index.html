@@ -8,6 +8,9 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com https://*.firebasestorage.googleapis.com https://*.firebase.com https://*.appspot.com https://*.here.com; img-src 'self' data: https://*.googleapis.com https://*.gstatic.com https://*.firebasestorage.googleapis.com blob:; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://cdnjs.cloudflare.com https://*.here.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com https://*.firebase.com https://cdnjs.cloudflare.com https://*.here.com; connect-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com https://*.firebasestorage.googleapis.com https://*.firebase.com https://*.here.com https://*.hereapi.com wss://*.firebaseio.com; font-src 'self' data: https://cdnjs.cloudflare.com https://*.gstatic.com https://*.googleapis.com; frame-src 'self';">
     <title>Cardápio Digital - Mapeju Doces</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/checkout.css">
     
     <!-- Estilos incorporados -->
     <style>
@@ -700,187 +703,7 @@
         padding-top: 10px;
         border-top: 1px solid var(--border-color);
     }
-
-    .submit-btn {
-        background-color: var(--primary-color);
-        color: white;
-        padding: 12px 20px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        width: 100%;
-        font-size: 1em;
-        font-weight: bold;
-        transition: background-color 0.3s ease;
-    }
-
-    .submit-btn:hover {
-        background-color: #c82333;
-    }
-
-    .address-input-container {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 10px;
-    }
-
-    .address-input-container input {
-        flex: 1;
-    }
-
-    .location-btn {
-        white-space: nowrap;
-        padding: 8px 15px;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-
-    .location-btn:hover {
-        background-color: #45a049;
-    }
-
-    .location-btn i {
-        font-size: 14px;
-    }
-
-    .address-help {
-        margin-bottom: 5px;
-        color: #666;
-    }
-
-    .address-details {
-        margin-top: 10px;
-    }
-
-    .quadra-lote {
-        display: flex;
-        gap: 15px;
-        margin-bottom: 10px;
-    }
-
-    .quadra-lote > div {
-        flex: 1;
-    }
-
-    .quadra-lote input {
-        width: 100%;
-    }
-
-    .address-complement {
-        margin-top: 10px;
-    }
-
-    .address-complement input {
-        width: 100%;
-    }
-
-    /* Estilos para opções de entrega */
-    .delivery-options {
-        display: flex;
-        gap: 15px;
-        margin-bottom: 20px;
-    }
-
-    .delivery-option {
-        flex: 1;
-        position: relative;
-        text-align: center;
-    }
-
-    .delivery-option input[type="radio"] {
-        display: none;
-    }
-
-    .delivery-option label {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 15px;
-        background: #fff;
-        border: 2px solid #ddd;
-        border-radius: 10px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .delivery-option label:hover {
-        border-color: var(--primary-color);
-    }
-
-    .delivery-option input[type="radio"]:checked + label {
-        border-color: var(--primary-color);
-        background: #fff5f5;
-    }
-
-    .delivery-option i {
-        font-size: 24px;
-        margin-bottom: 8px;
-        color: var(--primary-color);
-    }
-
-    .delivery-option .option-title {
-        font-weight: bold;
-        margin-bottom: 4px;
-    }
-
-    .delivery-option .option-description {
-        font-size: 0.8em;
-        color: #666;
-    }
     </style>
-    
-    <!-- Firebase App (the core Firebase SDK) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <!-- Firebase Firestore -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <!-- Firebase Auth -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <!-- Firebase Storage -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-    
-    <!-- Google Maps JavaScript API -->
-    <script>
-        // Função de callback do Google Maps
-        function initMap() {
-            console.log('Google Maps carregado');
-            if (window.deliveryManager) {
-                window.deliveryManager.initializeGoogleMaps();
-            }
-        }
-
-        // Função de fallback caso o Google Maps não carregue
-        function gm_authFailure() {
-            console.error('Falha na autenticação do Google Maps');
-            if (window.deliveryManager) {
-                window.deliveryManager.handleGoogleMapsError();
-            }
-        }
-
-        // Inicializar o DeliveryManager após o carregamento do DOM
-        document.addEventListener('DOMContentLoaded', () => {
-            window.deliveryManager = new DeliveryManager();
-        });
-    </script>
-    <!-- 
-        IMPORTANTE: Para o funcionamento correto do mapa, você precisa:
-        1. Ativar as seguintes APIs no Google Cloud Console:
-           - Maps JavaScript API
-           - Places API
-           - Geocoding API
-        2. Configurar as restrições apropriadas para cada chave
-    -->
-    <script 
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBrimCGWjJF76ptFZu7frm0hB9iw4Ty0p8&libraries=places,geocoding&callback=initMap&region=BR&loading=async"
-        async
-        defer
-        crossorigin="anonymous">
-    </script>
 </head>
 <body>
     <div class="container">
@@ -890,85 +713,89 @@
                 <p>Cardápio Digital</p>
             </div>
             <div class="admin-button">
-                <button id="admin-login-btn"><i class="fas fa-user-lock"></i> Área Administrativa</button>
+                <button id="admin-login-btn">Área Administrativa</button>
+            </div>
+            <div class="share-button">
+                <button id="share-btn" class="secondary-btn">
+                    <i class="fas fa-share-alt"></i> Compartilhar Cardápio
+                </button>
             </div>
         </header>
 
-        <main>
-            <div class="categories">
-                <!-- Categorias serão adicionadas dinamicamente via JavaScript -->
-                <div class="loading-spinner" id="categories-loading">
-                    <i class="fas fa-spinner fa-spin"></i> Carregando categorias...
-                </div>
+        <div class="categories">
+            <div id="categories-loading" class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i> Carregando categorias...
             </div>
+            <!-- Categorias serão adicionadas dinamicamente via JavaScript -->
+        </div>
 
-            <div class="products">
-                <!-- Produtos serão adicionados dinamicamente via JavaScript -->
-                <div class="empty-message">
-                    <p>Selecione uma categoria para ver os produtos</p>
-                </div>
-            </div>
+        <div class="products">
+            <!-- Produtos serão adicionados dinamicamente via JavaScript -->
+        </div>
 
-            <div class="cart">
-                <button class="close-cart-btn" id="close-cart-btn"><i class="fas fa-times"></i></button>
-                <h2><i class="fas fa-shopping-cart"></i> Seu Pedido</h2>
-                <div class="cart-items">
-                    <!-- Itens do carrinho serão adicionados dinamicamente via JavaScript -->
-                    <div class="empty-cart">
-                        <p>Seu carrinho está vazio</p>
-                    </div>
-                </div>
-                <div class="cart-total">
-                    <p>Total: <span id="cart-total-value">R$ 0,00</span></p>
-                </div>
-                <div class="cart-buttons">
-                    <button id="clear-cart-btn" class="secondary-btn"><i class="fas fa-trash"></i> Limpar</button>
-                    <button id="order-btn" class="primary-btn"><i class="fab fa-whatsapp"></i> Fazer Pedido</button>
-                </div>
+        <div class="cart">
+            <h2>Seu Pedido</h2>
+            <button id="close-cart-btn" class="close-cart-btn">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="cart-items">
+                <!-- Itens do carrinho serão adicionados dinamicamente via JavaScript -->
             </div>
-        </main>
+            <div class="empty-cart">
+                <i class="fas fa-shopping-cart"></i>
+                <p>Seu carrinho está vazio</p>
+            </div>
+            <div class="cart-total">
+                <p>Total: <span id="cart-total-value">R$ 0,00</span></p>
+            </div>
+            <div class="cart-actions">
+                <button id="clear-cart-btn" class="secondary-btn">
+                    <i class="fas fa-trash"></i> Limpar
+                </button>
+                <button id="order-btn" class="primary-btn">
+                    <i class="fab fa-whatsapp"></i> Fazer Pedido
+                </button>
+            </div>
+        </div>
+
+        <button id="floating-cart-btn" class="floating-cart-btn">
+            <i class="fas fa-shopping-cart"></i>
+            <span id="cart-badge" class="cart-badge">0</span>
+        </button>
 
         <footer>
             <p>&copy; 2025 Mapeju Doces - Todos os direitos reservados</p>
-            <p class="cookie-notice" style="font-size: 0.8em; color: #666; margin-top: 10px;">
-                Este site utiliza cookies para melhorar sua experiência. Ao continuar navegando, 
-                você concorda com nossa <a href="#" id="privacy-link" style="color: #dc3545;">Política de Privacidade</a>.
-            </p>
+            <p class="cookie-notice">Este site utiliza cookies para melhorar sua experiência. <a href="#" id="privacy-link">Política de Privacidade</a></p>
         </footer>
     </div>
 
-    <!-- Botão flutuante do carrinho para dispositivos móveis -->
-    <button class="floating-cart-btn" id="floating-cart-btn">
-        <i class="fas fa-shopping-cart"></i>
-        <span class="cart-badge" id="cart-badge">0</span>
-    </button>
-
-    <!-- Modal de Login Administrativo -->
-    <div id="admin-modal" class="modal">
+    <!-- Modal de Login Admin -->
+    <div id="admin-login-modal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Área Administrativa</h2>
-            <form id="admin-login-form" autocomplete="on">
+            <h2>Login Administrativo</h2>
+            <form id="admin-login-form">
                 <div class="form-group">
-                    <label for="email">Email:</label>
-                    <input type="email" id="email" name="email" autocomplete="email" required>
+                    <label for="admin-email">Email:</label>
+                    <input type="email" id="admin-email" required>
                 </div>
                 <div class="form-group">
-                    <label for="password">Senha:</label>
-                    <input type="password" id="password" name="password" autocomplete="current-password" required>
+                    <label for="admin-password">Senha:</label>
+                    <input type="password" id="admin-password" required>
                 </div>
                 <button type="submit" class="primary-btn">Entrar</button>
             </form>
         </div>
     </div>
 
-    <!-- Painel Administrativo (inicialmente oculto) -->
+    <!-- Painel Administrativo -->
     <div id="admin-panel" class="admin-panel">
         <div class="admin-header">
             <h2>Painel Administrativo</h2>
             <div class="admin-user-info">
                 <span id="admin-user-email"></span>
-                <button id="admin-logout-btn" class="secondary-btn"><i class="fas fa-sign-out-alt"></i> Sair</button>
+                <button id="admin-logout-btn" class="secondary-btn">Sair</button>
+                <button id="admin-close-btn" class="secondary-btn">Voltar ao Cardápio</button>
             </div>
         </div>
         
@@ -994,9 +821,9 @@
                     <div class="loading-spinner" id="admin-categories-loading">
                         <i class="fas fa-spinner fa-spin"></i> Carregando categorias...
                     </div>
-                    <ul id="admin-category-list">
+                    <div id="admin-category-list">
                         <!-- Categorias serão adicionadas dinamicamente via JavaScript -->
-                    </ul>
+                    </div>
                 </div>
             </div>
             

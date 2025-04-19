@@ -1,0 +1,273 @@
+/* Estilos específicos para o checkout e responsividade */
+
+/* Opções de entrega */
+.delivery-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.delivery-option {
+    position: relative;
+}
+
+.delivery-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.delivery-option label {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.delivery-option input[type="radio"]:checked + label {
+    border-color: var(--primary-color);
+    background-color: rgba(220, 53, 69, 0.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.delivery-option label i {
+    font-size: 1.5rem;
+    margin-right: 15px;
+    color: var(--primary-color);
+}
+
+.delivery-option .option-title {
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.delivery-option .option-description {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+}
+
+/* Campos de endereço */
+.address-input-container {
+    display: flex;
+    gap: 10px;
+}
+
+.address-input-container input {
+    flex-grow: 1;
+}
+
+#use-location-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#use-location-btn:hover {
+    background-color: #c82333;
+}
+
+.address-details {
+    margin-top: 10px;
+}
+
+.quadra-lote {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 5px;
+}
+
+.quadra-lote > div {
+    flex: 1;
+}
+
+.address-help {
+    margin-bottom: 10px;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+/* Informações de entrega */
+#delivery-fee-info {
+    margin: 15px 0;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+/* Botão de envio */
+.submit-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 15px;
+}
+
+.submit-btn:hover {
+    background-color: #c82333;
+}
+
+/* Responsividade para dispositivos móveis */
+@media screen and (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        margin-bottom: 8px;
+        font-size: 1rem;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 12px;
+        font-size: 16px; /* Evita zoom em iOS */
+    }
+    
+    .delivery-option label {
+        padding: 15px;
+    }
+    
+    .delivery-option .option-title {
+        font-size: 1rem;
+    }
+    
+    .quadra-lote {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .quadra-lote > div {
+        width: 100%;
+    }
+    
+    #use-location-btn {
+        padding: 0 15px;
+        height: 44px;
+    }
+    
+    .submit-btn {
+        padding: 15px;
+        font-size: 1.1rem;
+    }
+    
+    /* Melhorar espaçamento no checkout */
+    #checkout-modal h2 {
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+    }
+    
+    .order-summary {
+        margin: 25px 0;
+        padding: 15px;
+        font-size: 1rem;
+    }
+    
+    /* Melhorar visualização em telas pequenas */
+    @media screen and (max-width: 480px) {
+        .modal-content {
+            margin: 5% auto;
+            max-height: 90vh;
+        }
+        
+        .delivery-options {
+            gap: 15px;
+        }
+        
+        .delivery-option label {
+            flex-direction: column;
+            text-align: center;
+            padding: 15px 10px;
+        }
+        
+        .delivery-option label i {
+            margin-right: 0;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+        
+        .delivery-option .option-description {
+            display: block;
+            width: 100%;
+            margin-top: 5px;
+        }
+    }
+}
+
+/* Melhorias de acessibilidade */
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: 2px solid var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25);
+}
+
+.delivery-option input[type="radio"]:focus + label {
+    outline: 2px solid var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25);
+}
+
+/* Feedback visual para erros */
+.form-group.error input,
+.form-group.error select,
+.form-group.error textarea {
+    border-color: #dc3545;
+}
+
+.form-group.error .error-message {
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin-top: 5px;
+}
+
+/* Animações suaves */
+.delivery-option label,
+.submit-btn,
+#use-location-btn {
+    transition: all 0.3s ease;
+}
+
+/* Melhorias para toque em dispositivos móveis */
+@media (hover: none) {
+    .delivery-option label,
+    .submit-btn,
+    #use-location-btn {
+        transition: none;
+    }
+    
+    .delivery-option label:active {
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+    
+    .submit-btn:active {
+        background-color: #b21f2d;
+    }
+    
+    #use-location-btn:active {
+        background-color: #b21f2d;
+    }
+}

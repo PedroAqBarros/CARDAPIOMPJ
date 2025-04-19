@@ -28,6 +28,7 @@ class DeliveryManager {
         this.addressInput = null;
         this.initialized = false;
         this.isGoogleMapsAvailable = true;
+        this.currentDeliveryType = 'delivery'; // Valor padrão
         
         // Configurar callback para inicialização do Google Maps
         if (typeof google === 'undefined') {
@@ -56,6 +57,7 @@ class DeliveryManager {
             this.setupAutocomplete();
             this.setupLocationButton();
             this.setupAddressInput();
+            this.setupDeliveryTypeToggle();
             
             this.initialized = true;
             console.log('Google Maps inicializado com sucesso');
@@ -156,6 +158,11 @@ class DeliveryManager {
         if (addressInput) {
             addressInput.addEventListener('input', async () => {
                 try {
+                    // Verificar se estamos no modo de entrega
+                    if (this.currentDeliveryType !== 'delivery') {
+                        return;
+                    }
+
                     const subtotalElement = document.getElementById('order-subtotal');
                     const deliveryFeeElement = document.getElementById('delivery-fee');
                     const totalElement = document.getElementById('order-total');
@@ -198,6 +205,98 @@ class DeliveryManager {
                     this.handleError(error.message);
                 }
             });
+        }
+    }
+
+    // Novo método para configurar a alternância entre entrega e retirada
+    setupDeliveryTypeToggle() {
+        const deliveryRadio = document.getElementById('delivery-option-delivery');
+        const pickupRadio = document.getElementById('delivery-option-pickup');
+        const addressContainer = document.getElementById('delivery-address-container');
+        const deliveryFeeInfo = document.getElementById('delivery-fee-info');
+        const deliveryFeeElement = document.getElementById('delivery-fee');
+        const totalElement = document.getElementById('order-total');
+        const subtotalElement = document.getElementById('order-subtotal');
+        const quadraInput = document.getElementById('quadra');
+        const loteInput = document.getElementById('lote');
+        
+        if (deliveryRadio && pickupRadio && addressContainer) {
+            // Função para atualizar a interface com base no tipo de entrega
+            const updateDeliveryUI = (isDelivery) => {
+                try {
+                    this.currentDeliveryType = isDelivery ? 'delivery' : 'pickup';
+                    
+                    // Mostrar/ocultar campos de endereço
+                    addressContainer.style.display = isDelivery ? 'block' : 'none';
+                    
+                    // Atualizar campos obrigatórios
+                    if (quadraInput && loteInput) {
+                        quadraInput.required = isDelivery;
+                        loteInput.required = isDelivery;
+                    }
+                    
+                    // Atualizar taxa de entrega e total
+                    if (deliveryFeeElement && totalElement && subtotalElement) {
+                        const subtotalValue = this.extractValue(subtotalElement.textContent);
+                        
+                        if (!isDelivery) {
+                            // Retirada: taxa zero
+                            deliveryFeeElement.textContent = 'R$ 0,00';
+                            totalElement.textContent = this.formatValue(subtotalValue);
+                            
+                            if (deliveryFeeInfo) {
+                                deliveryFeeInfo.innerHTML = `
+                                    <p class="fee-info" style="color: #28a745;">
+                                        <i class="fas fa-store"></i> Retirada na loja: sem taxa de entrega
+                                    </p>
+                                    <p class="store-address" style="font-size: 0.9em; margin-top: 5px;">
+                                        Endereço: ${STORE_LOCATION.address}
+                                    </p>
+                                `;
+                            }
+                        } else {
+                            // Entrega: recalcular taxa se houver endereço
+                            const addressInput = document.getElementById('customer-address');
+                            if (addressInput && addressInput.value.trim()) {
+                                // Disparar evento de input para recalcular
+                                addressInput.dispatchEvent(new Event('input'));
+                            } else {
+                                // Sem endereço ainda
+                                deliveryFeeElement.textContent = 'R$ 0,00';
+                                totalElement.textContent = this.formatValue(subtotalValue);
+                                
+                                if (deliveryFeeInfo) {
+                                    deliveryFeeInfo.innerHTML = `
+                                        <p class="fee-info">
+                                            Digite seu endereço para calcular a taxa de entrega
+                                        </p>
+                                    `;
+                                }
+                            }
+                        }
+                    }
+                    
+                    console.log(`Modo de entrega alterado para: ${this.currentDeliveryType}`);
+                } catch (error) {
+                    console.error('Erro ao atualizar UI de entrega:', error);
+                }
+            };
+            
+            // Configurar eventos para os radio buttons
+            deliveryRadio.addEventListener('change', () => {
+                if (deliveryRadio.checked) {
+                    updateDeliveryUI(true);
+                }
+            });
+            
+            pickupRadio.addEventListener('change', () => {
+                if (pickupRadio.checked) {
+                    updateDeliveryUI(false);
+                }
+            });
+            
+            // Inicializar com o valor atual
+            updateDeliveryUI(deliveryRadio.checked);
         }
     }
 
@@ -373,6 +472,17 @@ class DeliveryManager {
         this.updateDeliveryStatus('O serviço de mapa não está disponível no momento. Por favor, entre em contato conosco para confirmar a disponibilidade de entrega.');
     }
 
+    updateDeliveryStatus(message) {
+        const deliveryFeeInfo = document.getElementById('delivery-fee-info');
+        if (deliveryFeeInfo) {
+            deliveryFeeInfo.innerHTML = `
+                <p class="warning-message" style="color: #ffc107;">
+                    <i class="fas fa-exclamation-triangle"></i> ${message}
+                </p>
+            `;
+        }
+    }
+
     async getCoordinatesFromAddress(address) {
         if (!this.isGoogleMapsAvailable) {
             console.log('Usando fallback de geocodificação');
@@ -386,105 +496,48 @@ class DeliveryManager {
             // Primeiro, tenta com o endereço completo
             const results = await new Promise((resolve, reject) => {
                 geocoder.geocode({ 
-                    address: address + ', Mapejú, PE',
-                    region: 'BR',
-                    bounds: new google.maps.LatLngBounds(
-                        new google.maps.LatLng(-7.6500, -37.0500), // SW
-                        new google.maps.LatLng(-7.5500, -36.9500)  // NE
-                    )
+                    address: address,
+                    region: 'BR'
                 }, (results, status) => {
-                    if (status === 'OK') {
-                        resolve(results);
-                    } else if (status === 'ZERO_RESULTS') {
-                        resolve([]);
+                    if (status === 'OK' && results[0]) {
+                        resolve(results[0].geometry.location);
                     } else {
-                        console.warn(`Erro na geocodificação: ${status}`);
-                        resolve(null);
+                        reject(new Error('Geocodificação falhou: ' + status));
                     }
                 });
             });
-
-            if (results && results.length > 0) {
-                const location = results[0].geometry.location;
-                console.log('Geocodificação bem-sucedida:', {
-                    endereço: results[0].formatted_address,
-                    coordenadas: { lat: location.lat(), lng: location.lng() }
-                });
-                return {
-                    lat: location.lat(),
-                    lng: location.lng()
-                };
-            }
             
-            console.log('Geocodificação falhou, usando sistema de fallback');
-            return this.getFallbackCoordinates(address);
+            return {
+                lat: results.lat(),
+                lng: results.lng()
+            };
         } catch (error) {
             console.error('Erro na geocodificação:', error);
-            console.log('Usando sistema de fallback devido a erro');
-            return this.getFallbackCoordinates(address);
+            throw new Error('Não foi possível localizar o endereço. Por favor, verifique se está correto.');
         }
     }
 
     getFallbackCoordinates(address) {
-        // Coordenadas aproximadas para diferentes regiões de Aparecida de Goiânia
-        const regions = {
-            'jardim olimpico': { lat: -16.74663483291268, lng: -49.22789065029966 },
-            'centro': { lat: -16.8200, lng: -49.2400 },
-            'bairro': { lat: -16.7500, lng: -49.2300 }
-        };
-
-        // Tentar encontrar a região no endereço
-        const addressLower = address.toLowerCase();
-        for (const [region, coords] of Object.entries(regions)) {
-            if (addressLower.includes(region)) {
-                console.log(`Usando coordenadas de fallback para a região: ${region}`);
-                return coords;
-            }
-        }
-
-        // Se não encontrar nenhuma região, usar coordenadas da loja
-        console.log('Usando coordenadas da loja como fallback');
+        // Implementação simplificada para quando o Google Maps não está disponível
+        // Retorna coordenadas aproximadas baseadas em padrões de endereço
+        console.log('Usando coordenadas de fallback para:', address);
+        
+        // Coordenadas padrão (centro da cidade)
         return {
-            lat: STORE_LOCATION.lat,
-            lng: STORE_LOCATION.lng
+            lat: -16.7286,
+            lng: -49.2939
         };
-    }
-
-    async getOAuthToken() {
-        // Implementar a lógica para obter o token OAuth
-        // Este é um exemplo simplificado - você precisará implementar a lógica real
-        const tokenEndpoint = 'https://oauth2.googleapis.com/token';
-        const response = await fetch(tokenEndpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-                client_id: oauthConfig.client_id,
-                client_secret: oauthConfig.client_secret,
-                grant_type: 'client_credentials',
-                scope: 'https://www.googleapis.com/auth/geocoding'
-            })
-        });
-
-        const data = await response.json();
-        return data.access_token;
-    }
-
-    updateDeliveryStatus(message) {
-        const deliveryFeeInfo = document.getElementById('delivery-fee-info');
-        if (deliveryFeeInfo) {
-            deliveryFeeInfo.innerHTML = `
-                <p class="error-message" style="color: #dc3545;">
-                    <i class="fas fa-exclamation-circle"></i> ${message}
-                </p>
-                <p style="font-size: 0.9em; margin-top: 5px;">
-                    Se o problema persistir, entre em contato pelo WhatsApp para finalizar seu pedido.
-                </p>
-            `;
-        }
     }
 }
 
-// Disponibilizar globalmente
-window.deliveryManager = new DeliveryManager(); 
+// Inicializar o gerenciador de entrega quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        // Criar instância do gerenciador de entrega
+        window.deliveryManager = new DeliveryManager();
+        
+        console.log('Gerenciador de entrega inicializado');
+    } catch (error) {
+        console.error('Erro ao inicializar gerenciador de entrega:', error);
+    }
+});

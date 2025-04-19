@@ -68,14 +68,16 @@ function formatPaymentMethod(method) {
 
 // Função para formatar o endereço completo
 function formatFullAddress(mainAddress, quadra, lote, complemento) {
-    if (!mainAddress || !quadra || !lote) {
-        throw new Error('Endereço, Quadra e Lote são obrigatórios');
+    if (!mainAddress) {
+        throw new Error('Endereço é obrigatório');
     }
 
     let parts = [mainAddress];
     
-    // Adicionar quadra e lote (agora obrigatórios)
-    parts.push(`Quadra ${quadra}, Lote ${lote}`);
+    // Adicionar quadra e lote se fornecidos
+    if (quadra && lote) {
+        parts.push(`Quadra ${quadra}, Lote ${lote}`);
+    }
     
     // Adicionar complemento se fornecido
     if (complemento) {
@@ -143,14 +145,38 @@ function sendToWhatsApp(cartItems) {
     form.onsubmit = async function(e) {
         e.preventDefault();
         
-        // Verificar campos obrigatórios apenas se for entrega
-        const deliveryType = document.querySelector('input[name="delivery-type"]:checked').value;
-        if (deliveryType === 'delivery' && (!quadraInput.value.trim() || !loteInput.value.trim())) {
-            alert('Por favor, preencha a Quadra e o Lote.');
-            return;
-        }
-
         try {
+            // Verificar se o nome foi preenchido
+            const customerName = document.getElementById('customer-name').value.trim();
+            if (!customerName) {
+                alert('Por favor, informe seu nome.');
+                return;
+            }
+            
+            // Verificar se o método de pagamento foi selecionado
+            const paymentMethodValue = paymentMethod.value;
+            if (!paymentMethodValue) {
+                alert('Por favor, selecione uma forma de pagamento.');
+                return;
+            }
+            
+            // Obter o tipo de entrega selecionado
+            const deliveryType = document.querySelector('input[name="delivery-type"]:checked').value;
+            
+            // Verificar campos obrigatórios apenas se for entrega
+            if (deliveryType === 'delivery') {
+                if (!addressInput.value.trim()) {
+                    alert('Por favor, informe o endereço de entrega.');
+                    return;
+                }
+                
+                // Verificar quadra e lote apenas se for entrega
+                if (!quadraInput.value.trim() || !loteInput.value.trim()) {
+                    alert('Por favor, preencha a Quadra e o Lote.');
+                    return;
+                }
+            }
+
             // Formatar endereço completo se for entrega
             let fullAddress = '';
             if (deliveryType === 'delivery') {
@@ -202,14 +228,14 @@ function sendToWhatsApp(cartItems) {
             
             // Adicionar informações do cliente
             message += '*Dados do Cliente*\n';
-            message += `Nome: ${document.getElementById('customer-name').value}\n`;
+            message += `Nome: ${customerName}\n`;
             if (deliveryType === 'delivery') {
                 message += `Endereço: ${fullAddress}\n`;
             } else {
                 message += `Forma de Recebimento: Retirada no Local\n`;
                 message += `Endereço da Loja: ${STORE_LOCATION.address}\n`;
             }
-            const paymentMethodValue = paymentMethod.value;
+            
             message += `Forma de Pagamento: ${formatPaymentMethod(paymentMethodValue)}`;
             
             if (paymentMethodValue === 'dinheiro') {
@@ -243,15 +269,35 @@ function sendToWhatsApp(cartItems) {
             // Limpar formulário
             form.reset();
             
-            // Abrir WhatsApp
-            window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank');
+            // Abrir WhatsApp em nova janela
+            const whatsappWindow = window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank');
+            
+            // Verificar se a janela foi aberta com sucesso
+            if (!whatsappWindow || whatsappWindow.closed || typeof whatsappWindow.closed === 'undefined') {
+                // Fallback para dispositivos que bloqueiam popups
+                alert('Seu navegador bloqueou a abertura do WhatsApp. Vamos tentar novamente.');
+                window.location.href = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+            }
+            
         } catch (error) {
-            alert(error.message);
+            console.error('Erro ao processar pedido:', error);
+            alert('Ocorreu um erro ao processar seu pedido: ' + error.message);
         }
     };
     
     // Mostrar modal
     modal.style.display = 'block';
+    
+    // Verificar se o modal foi aberto em um dispositivo móvel
+    if (window.innerWidth < 768) {
+        // Rolar para o topo do modal em dispositivos móveis
+        setTimeout(() => {
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) {
+                modalContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
+    }
 }
 
 // Disponibilizar função globalmente
