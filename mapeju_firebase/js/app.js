@@ -155,6 +155,47 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function setupEventListeners() {
+        // Botão de login do admin
+        const adminLoginBtn = document.getElementById('admin-login-btn');
+        if (adminLoginBtn) {
+            adminLoginBtn.addEventListener('click', () => {
+                const adminLoginModal = document.getElementById('admin-login-modal');
+                if (adminLoginModal) {
+                    adminLoginModal.style.display = 'block';
+                }
+            });
+        }
+
+        // Botão de fechar modal de login
+        const closeLoginBtn = document.querySelector('#admin-login-modal .close');
+        if (closeLoginBtn) {
+            closeLoginBtn.addEventListener('click', () => {
+                const adminLoginModal = document.getElementById('admin-login-modal');
+                if (adminLoginModal) {
+                    adminLoginModal.style.display = 'none';
+                }
+            });
+        }
+
+        // Adicionar listener para o input de endereço
+        const addressInput = document.getElementById('customer-address');
+        if (addressInput) {
+            addressInput.addEventListener('input', debounce(calculateDeliveryFee, 500));
+        }
+
+        // Fechar modais quando clicar fora
+        window.addEventListener('click', (event) => {
+            const adminLoginModal = document.getElementById('admin-login-modal');
+            const adminPanel = document.getElementById('admin-panel');
+            
+            if (event.target === adminLoginModal) {
+                adminLoginModal.style.display = 'none';
+            }
+            if (event.target === adminPanel) {
+                adminPanel.style.display = 'none';
+            }
+        });
+
         // Botão para limpar carrinho
         clearCartBtn.addEventListener('click', function() {
             if (confirm('Tem certeza que deseja limpar o carrinho?')) {
@@ -165,13 +206,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Botão para fazer pedido via WhatsApp
-        orderBtn.addEventListener('click', function() {
+        orderBtn.addEventListener('click', async function() {
             if (appData.cart.length === 0) {
                 alert('Seu carrinho está vazio. Adicione produtos antes de fazer o pedido.');
                 return;
             }
             
-            sendOrder();
+            await sendOrder();
         });
         
         // Botão flutuante do carrinho (mobile)
@@ -303,15 +344,15 @@ document.addEventListener('DOMContentLoaded', function() {
             .where('categoryId', '==', categoryId)
             .onSnapshot(snapshot => {
                 // Limpar container
-                productsContainer.innerHTML = '';
-
+        productsContainer.innerHTML = '';
+        
                 if (snapshot.empty) {
                     // Mostrar mensagem quando não há produtos
                     const emptyMessage = document.createElement('div');
                     emptyMessage.className = 'empty-products-message';
                     emptyMessage.innerHTML = `
                         <i class="fas fa-box-open"></i>
-                        <p>Nenhum produto encontrado nesta categoria</p>
+                            <p>Nenhum produto encontrado nesta categoria</p>
                     `;
                     productsContainer.appendChild(emptyMessage);
                     return;
@@ -512,8 +553,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Função para enviar pedido
-    function sendOrder() {
-        const cartItems = getCartItems();
+    async function sendOrder() {
+        const cartItems = await getCartItems();
         if (cartItems.length === 0) {
             showNotification('Adicione itens ao carrinho antes de enviar o pedido', 'error');
             return;
@@ -523,12 +564,25 @@ document.addEventListener('DOMContentLoaded', function() {
         window.whatsappIntegration.sendToWhatsApp(cartItems);
     }
 
+    // Função para obter itens do carrinho com detalhes
+    async function getCartItems() {
+        const allProducts = await productManager.getProducts();
+        return appData.cart.map(item => {
+            const product = allProducts.find(prod => prod.id === item.productId);
+            if (product) {
+                return {
+                    ...product,
+                    quantity: item.quantity
+                };
+            }
+            return null;
+        }).filter(item => item !== null);
+    }
+
     // Expor funções globalmente
     window.cardapioApp = {
         renderCart,
-        updateCartBadge,
-        sendOrderToWhatsApp,
-        showOrderConfirmation
+        updateCartBadge
     };
 
     // Gerenciar modal de política de privacidade
@@ -553,5 +607,190 @@ document.addEventListener('DOMContentLoaded', function() {
                 privacyModal.style.display = 'none';
             }
         });
+    }
+
+    // Adicionar listeners para mudanças no tipo de entrega e endereço
+    document.addEventListener('DOMContentLoaded', function() {
+        const deliveryTypeInputs = document.querySelectorAll('input[name="delivery-type"]');
+        const addressInput = document.getElementById('customer-address');
+        const deliveryAddressContainer = document.getElementById('delivery-address-container');
+        const deliveryFeeInfo = document.getElementById('delivery-fee-info');
+        const deliveryFeeElement = document.getElementById('delivery-fee');
+        const orderSubtotalElement = document.getElementById('order-subtotal');
+        const orderTotalElement = document.getElementById('order-total');
+        const checkoutButton = document.querySelector('.submit-btn');
+
+        // Função para atualizar a visibilidade do container de endereço
+        function updateDeliveryContainer() {
+            const deliveryType = document.querySelector('input[name="delivery-type"]:checked')?.value;
+            const addressContainer = document.getElementById('delivery-address-container');
+            const deliveryFeeInfo = document.getElementById('delivery-fee-info');
+            
+            console.log('Tipo de entrega selecionado:', deliveryType);
+            console.log('Container de endereço encontrado:', !!addressContainer);
+
+            if (!addressContainer) {
+                console.error('Container de endereço não encontrado');
+                return;
+            }
+
+            if (deliveryType === 'pickup') {
+                addressContainer.style.display = 'none';
+                document.getElementById('customer-address').value = '';
+                if (deliveryFeeInfo) {
+                    deliveryFeeInfo.textContent = 'Retirada gratuita na loja';
+                }
+                window.currentDeliveryInfo = {
+                    fee: 0,
+                    distance: 0,
+                    type: 'pickup'
+                };
+                updateTotal();
+            } else {
+                addressContainer.style.display = 'block';
+                calculateDeliveryFee();
+            }
+        }
+
+        if (deliveryTypeInputs) {
+            deliveryTypeInputs.forEach(input => {
+                input.addEventListener('change', updateDeliveryContainer);
+            });
+        }
+
+        if (addressInput) {
+            if (/Mobi|Android/i.test(navigator.userAgent)) {
+                addressInput.addEventListener('input', calculateDeliveryFee);
+            } else {
+                addressInput.addEventListener('input', debounce(calculateDeliveryFee, 500));
+            }
+            addressInput.addEventListener('blur', calculateDeliveryFee);
+        }
+
+        // Verificar estado inicial
+        const initialDeliveryType = document.querySelector('input[name="delivery-type"]:checked');
+        if (initialDeliveryType) {
+            updateDeliveryContainer();
+        }
+    });
+
+    // Função para calcular taxa de entrega
+    async function calculateDeliveryFee() {
+        // Declarar variáveis fora do try para estarem acessíveis no catch
+        const addressInput = document.getElementById('customer-address');
+        const deliveryFeeInfo = document.getElementById('delivery-fee-info');
+        const deliveryFeeElement = document.getElementById('delivery-fee');
+        const orderSubtotalElement = document.getElementById('order-subtotal');
+        const orderTotalElement = document.getElementById('order-total');
+        const checkoutButton = document.querySelector('.submit-btn');
+        const deliveryAddressContainer = document.getElementById('delivery-address-container'); // Mantido para referência, mas não para estilo
+        const deliveryType = document.querySelector('input[name="delivery-type"]:checked')?.value || 'delivery';
+
+        try {
+            // Verificar se o campo de endereço está preenchido (necessário para cálculo)
+            if (!addressInput || !addressInput.value.trim()) {
+                if (deliveryFeeInfo) {
+                    deliveryFeeInfo.style.display = 'block';
+                    deliveryFeeInfo.innerHTML = '<p class="fee-info">Digite seu endereço para calcular a taxa de entrega</p>';
+                }
+                if (deliveryFeeElement) {
+                    deliveryFeeElement.textContent = 'R$ 0,00';
+                }
+                if (checkoutButton) {
+                    checkoutButton.disabled = true;
+                }
+                window.currentDelivery = null; // Resetar info de entrega
+                return;
+            }
+
+            // Mostrar indicador de carregamento
+            if (deliveryFeeInfo) {
+                deliveryFeeInfo.style.display = 'block';
+                deliveryFeeInfo.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Calculando taxa de entrega...</p>';
+            }
+            if (checkoutButton) {
+                checkoutButton.disabled = true;
+            }
+
+            // Obter o total do pedido
+            let cartTotal = 0;
+            if (orderSubtotalElement) {
+                cartTotal = parseFloat(orderSubtotalElement.textContent.replace(/[^\d,\.]/g, '').replace(',', '.')) || 0;
+            }
+
+            console.log('Iniciando cálculo de taxa para:', addressInput.value);
+
+            // Calcular taxa de entrega usando deliveryManager
+            const result = await window.deliveryManager.calculateDeliveryFee(addressInput.value, cartTotal);
+
+            console.log('Resultado do cálculo (app.js):', result);
+
+            // Atualizar informações
+            if (deliveryFeeElement) {
+                deliveryFeeElement.textContent = `R$ ${result.fee.toFixed(2)}`;
+            }
+            
+            // Atualizar total com entrega
+            if (orderTotalElement) {
+                const totalWithDelivery = cartTotal + result.fee;
+                orderTotalElement.textContent = `R$ ${totalWithDelivery.toFixed(2)}`;
+            }
+
+            // Mostrar informações da entrega
+            if (deliveryFeeInfo) {
+                deliveryFeeInfo.innerHTML = `
+                    <p class="distance-info">Distância: ${result.distance.toFixed(1)}km</p>
+                    <p class="fee-info">${result.message || `Taxa de entrega: R$ ${result.fee.toFixed(2)}`}</p>
+                `;
+            }
+
+            // Habilitar botão de checkout
+            if (checkoutButton) {
+                checkoutButton.disabled = false;
+            }
+
+            // Armazenar informações para uso posterior
+            window.currentDelivery = {
+                type: 'delivery',
+                address: addressInput.value,
+                fee: result.fee,
+                distance: result.distance
+            };
+
+        } catch (error) {
+            console.error('Erro ao calcular taxa de entrega (app.js):', error);
+            // Usar as variáveis declaradas fora do try
+            if (deliveryFeeInfo) {
+                deliveryFeeInfo.style.display = 'block';
+                deliveryFeeInfo.innerHTML = `
+                    <p class="error-message" style="color: var(--danger-color);">
+                        <i class="fas fa-exclamation-circle"></i> ${error.message || 'Erro ao calcular taxa.'}
+                    </p>
+                `;
+            }
+            
+            if (deliveryFeeElement) {
+                deliveryFeeElement.textContent = 'R$ --'; // Indicar erro
+            }
+            
+            if (checkoutButton) {
+                checkoutButton.disabled = true;
+            }
+            
+            window.currentDelivery = null; // Resetar info de entrega em caso de erro
+        }
+    }
+
+    // Função de debounce para evitar muitas chamadas
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
 });

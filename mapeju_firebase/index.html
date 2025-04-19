@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
     <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com https://*.firebasestorage.googleapis.com https://*.firebase.com https://*.appspot.com; img-src 'self' data: https://*.googleapis.com https://*.gstatic.com https://*.firebasestorage.googleapis.com blob:; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com https://*.firebase.com https://cdnjs.cloudflare.com; connect-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com https://*.firebasestorage.googleapis.com https://*.firebase.com wss://*.firebaseio.com; font-src 'self' data: https://cdnjs.cloudflare.com https://*.gstatic.com https://*.googleapis.com; frame-src 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com https://*.firebasestorage.googleapis.com https://*.firebase.com https://*.appspot.com https://*.here.com; img-src 'self' data: https://*.googleapis.com https://*.gstatic.com https://*.firebasestorage.googleapis.com blob:; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://cdnjs.cloudflare.com https://*.here.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com https://*.firebase.com https://cdnjs.cloudflare.com https://*.here.com; connect-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com https://*.firebasestorage.googleapis.com https://*.firebase.com https://*.here.com https://*.hereapi.com wss://*.firebaseio.com; font-src 'self' data: https://cdnjs.cloudflare.com https://*.gstatic.com https://*.googleapis.com; frame-src 'self';">
     <title>Cardápio Digital - Mapeju Doces</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -653,6 +653,186 @@
         margin-top: 10px;
         padding: 0 15px;
     }
+
+    /* Estilos para o checkout */
+    .delivery-info {
+        color: var(--secondary-color);
+        font-size: 0.8em;
+        margin-top: 5px;
+        display: block;
+    }
+
+    .delivery-fee-info {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        font-size: 0.9em;
+    }
+
+    .distance-info {
+        color: var(--secondary-color);
+        margin-bottom: 5px;
+    }
+
+    .fee-info {
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+    .order-summary {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
+
+    .order-summary p {
+        margin: 5px 0;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .order-summary .total {
+        font-weight: bold;
+        font-size: 1.1em;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .submit-btn {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        font-size: 1em;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+    }
+
+    .submit-btn:hover {
+        background-color: #c82333;
+    }
+
+    .address-input-container {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .address-input-container input {
+        flex: 1;
+    }
+
+    .location-btn {
+        white-space: nowrap;
+        padding: 8px 15px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .location-btn:hover {
+        background-color: #45a049;
+    }
+
+    .location-btn i {
+        font-size: 14px;
+    }
+
+    .address-help {
+        margin-bottom: 5px;
+        color: #666;
+    }
+
+    .address-details {
+        margin-top: 10px;
+    }
+
+    .quadra-lote {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 10px;
+    }
+
+    .quadra-lote > div {
+        flex: 1;
+    }
+
+    .quadra-lote input {
+        width: 100%;
+    }
+
+    .address-complement {
+        margin-top: 10px;
+    }
+
+    .address-complement input {
+        width: 100%;
+    }
+
+    /* Estilos para opções de entrega */
+    .delivery-options {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .delivery-option {
+        flex: 1;
+        position: relative;
+        text-align: center;
+    }
+
+    .delivery-option input[type="radio"] {
+        display: none;
+    }
+
+    .delivery-option label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 15px;
+        background: #fff;
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .delivery-option label:hover {
+        border-color: var(--primary-color);
+    }
+
+    .delivery-option input[type="radio"]:checked + label {
+        border-color: var(--primary-color);
+        background: #fff5f5;
+    }
+
+    .delivery-option i {
+        font-size: 24px;
+        margin-bottom: 8px;
+        color: var(--primary-color);
+    }
+
+    .delivery-option .option-title {
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+
+    .delivery-option .option-description {
+        font-size: 0.8em;
+        color: #666;
+    }
     </style>
     
     <!-- Firebase App (the core Firebase SDK) -->
@@ -663,6 +843,44 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <!-- Firebase Storage -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    
+    <!-- Google Maps JavaScript API -->
+    <script>
+        // Função de callback do Google Maps
+        function initMap() {
+            console.log('Google Maps carregado');
+            if (window.deliveryManager) {
+                window.deliveryManager.initializeGoogleMaps();
+            }
+        }
+
+        // Função de fallback caso o Google Maps não carregue
+        function gm_authFailure() {
+            console.error('Falha na autenticação do Google Maps');
+            if (window.deliveryManager) {
+                window.deliveryManager.handleGoogleMapsError();
+            }
+        }
+
+        // Inicializar o DeliveryManager após o carregamento do DOM
+        document.addEventListener('DOMContentLoaded', () => {
+            window.deliveryManager = new DeliveryManager();
+        });
+    </script>
+    <!-- 
+        IMPORTANTE: Para o funcionamento correto do mapa, você precisa:
+        1. Ativar as seguintes APIs no Google Cloud Console:
+           - Maps JavaScript API
+           - Places API
+           - Geocoding API
+        2. Configurar as restrições apropriadas para cada chave
+    -->
+    <script 
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBrimCGWjJF76ptFZu7frm0hB9iw4Ty0p8&libraries=places,geocoding&callback=initMap&region=BR&loading=async"
+        async
+        defer
+        crossorigin="anonymous">
+    </script>
 </head>
 <body>
     <div class="container">
@@ -851,7 +1069,7 @@
         </div>
     </div>
 
-    <!-- Modal de Endereço e Pagamento -->
+    <!-- Modal de Checkout -->
     <div id="checkout-modal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
@@ -861,10 +1079,63 @@
                     <label for="customer-name">Nome:</label>
                     <input type="text" id="customer-name" required>
                 </div>
+                
                 <div class="form-group">
-                    <label for="customer-address">Endereço Completo:</label>
-                    <textarea id="customer-address" rows="3" required placeholder="Rua, número, bairro, complemento"></textarea>
+                    <label>Forma de Recebimento:</label>
+                    <div class="delivery-options">
+                        <div class="delivery-option">
+                            <input type="radio" name="delivery-type" id="delivery-option-delivery" value="delivery" checked>
+                            <label for="delivery-option-delivery">
+                                <i class="fas fa-motorcycle"></i>
+                                <span class="option-title">Entrega</span>
+                                <span class="option-description">Entregamos em sua casa</span>
+                            </label>
+                        </div>
+                        <div class="delivery-option">
+                            <input type="radio" name="delivery-type" id="delivery-option-pickup" value="pickup">
+                            <label for="delivery-option-pickup">
+                                <i class="fas fa-store"></i>
+                                <span class="option-title">Retirada</span>
+                                <span class="option-description">Retire na loja</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
+
+                <div id="delivery-address-container">
+                    <div class="form-group">
+                        <label for="customer-address">Endereço de Entrega:</label>
+                        <div class="address-input-container">
+                            <input type="text" id="customer-address" placeholder="Digite seu endereço">
+                            <button type="button" id="use-location-btn" title="Usar minha localização" aria-label="Usar minha localização">
+                                <i class="fas fa-location-arrow" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group address-details">
+                        <div class="quadra-lote">
+                            <div>
+                                <label for="quadra">Quadra:</label>
+                                <input type="text" id="quadra" placeholder="Ex: 15" required>
+                            </div>
+                            <div>
+                                <label for="lote">Lote:</label>
+                                <input type="text" id="lote" placeholder="Ex: 23" required>
+                            </div>
+                        </div>
+                        <div class="address-help">
+                            <small>Quadra e Lote são informações obrigatórias para a entrega</small>
+                        </div>
+                        <div class="address-complement">
+                            <label for="complemento">Complemento (opcional):</label>
+                            <input type="text" id="complemento" placeholder="Ex: Casa 2, Apto 101">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="delivery-fee-info" aria-live="polite"></div>
+
                 <div class="form-group">
                     <label for="payment-method">Forma de Pagamento:</label>
                     <select id="payment-method" required>
@@ -874,11 +1145,19 @@
                         <option value="cartao">Cartão (na entrega)</option>
                     </select>
                 </div>
-                <div id="change-container" class="form-group" style="display: none;">
+
+                <div id="change-container" style="display: none;">
                     <label for="change-amount">Troco para quanto?</label>
-                    <input type="number" id="change-amount" min="0" step="0.01" placeholder="0.00">
+                    <input type="number" id="change-amount" step="0.01" min="0">
                 </div>
-                <button type="submit" class="primary-btn">Enviar Pedido</button>
+
+                <div class="order-summary">
+                    <p>Subtotal: <span id="order-subtotal">R$ 0,00</span></p>
+                    <p>Taxa de entrega: <span id="delivery-fee">R$ 0,00</span></p>
+                    <p class="total">Total: <span id="order-total">R$ 0,00</span></p>
+                </div>
+
+                <button type="submit" class="submit-btn">Enviar Pedido</button>
             </form>
         </div>
     </div>
@@ -888,5 +1167,6 @@
     <script src="js/admin.js"></script>
     <script src="js/app.js"></script>
     <script src="js/whatsapp.js"></script>
+    <script src="js/delivery.js"></script>
 </body>
 </html>
