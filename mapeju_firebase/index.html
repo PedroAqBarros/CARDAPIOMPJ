@@ -346,7 +346,7 @@
         cursor: pointer;
     }
 
-    /* Modais */
+    /* Modal */
     .modal {
         display: none;
         position: fixed;
@@ -355,37 +355,35 @@
         top: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        overflow-y: auto;
+        background-color: rgba(0,0,0,0.5);
+        overflow: auto;
     }
 
     .modal-content {
-        background-color: white;
-        margin: 5% auto;
+        background-color: #fefefe;
+        margin: 15% auto;
         padding: 20px;
+        border: 1px solid #888;
+        width: 90%;
+        max-width: 500px;
         border-radius: 8px;
-        max-width: 90%;
-        width: 100%;
         position: relative;
-        max-height: 90vh;
-        overflow-y: auto;
     }
 
-    .close {
+    .modal .close {
         position: absolute;
-        top: 10px;
         right: 15px;
+        top: 10px;
         color: #aaa;
         font-size: 28px;
         font-weight: bold;
         cursor: pointer;
     }
 
-    .close:hover {
-        color: black;
+    .modal .close:hover {
+        color: #000;
     }
 
-    /* Formulários */
     .form-group {
         margin-bottom: 15px;
     }
@@ -393,17 +391,21 @@
     .form-group label {
         display: block;
         margin-bottom: 5px;
-        font-size: 0.9rem;
+        font-weight: bold;
     }
 
-    .form-group input, 
-    .form-group textarea, 
+    .form-group input,
+    .form-group textarea,
     .form-group select {
         width: 100%;
-        padding: 12px;
+        padding: 8px;
         border: 1px solid var(--border-color);
-        border-radius: 8px;
-        font-size: 1rem;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+
+    .form-group textarea {
+        resize: vertical;
     }
 
     /* Painel Administrativo */
@@ -846,6 +848,38 @@
                 <p>Qualquer questão sobre nossa política de privacidade pode ser direcionada para: contato@mapeju.com.br</p>
                 <p>Esta aplicação utiliza Firebase Storage para armazenamento de imagens de produtos.</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal de Endereço e Pagamento -->
+    <div id="checkout-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Finalizar Pedido</h2>
+            <form id="checkout-form">
+                <div class="form-group">
+                    <label for="customer-name">Nome:</label>
+                    <input type="text" id="customer-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="customer-address">Endereço Completo:</label>
+                    <textarea id="customer-address" rows="3" required placeholder="Rua, número, bairro, complemento"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="payment-method">Forma de Pagamento:</label>
+                    <select id="payment-method" required>
+                        <option value="">Selecione...</option>
+                        <option value="pix">PIX</option>
+                        <option value="dinheiro">Dinheiro</option>
+                        <option value="cartao">Cartão (na entrega)</option>
+                    </select>
+                </div>
+                <div id="change-container" class="form-group" style="display: none;">
+                    <label for="change-amount">Troco para quanto?</label>
+                    <input type="number" id="change-amount" min="0" step="0.01" placeholder="0.00">
+                </div>
+                <button type="submit" class="primary-btn">Enviar Pedido</button>
+            </form>
         </div>
     </div>
 

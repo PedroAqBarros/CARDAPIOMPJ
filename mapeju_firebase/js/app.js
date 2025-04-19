@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            sendOrderToWhatsApp();
+            sendOrder();
         });
         
         // Botão flutuante do carrinho (mobile)
@@ -511,67 +511,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Função para enviar pedido via WhatsApp
-    async function sendOrderToWhatsApp() {
-        if (appData.cart.length === 0) {
-            alert('Seu carrinho está vazio. Adicione produtos antes de fazer o pedido.');
-            return false;
+    // Função para enviar pedido
+    function sendOrder() {
+        const cartItems = getCartItems();
+        if (cartItems.length === 0) {
+            showNotification('Adicione itens ao carrinho antes de enviar o pedido', 'error');
+            return;
         }
         
-        // Obter todos os produtos para gerar a mensagem
-        const allProducts = await productManager.getProducts();
-        
-        // Variável total já é calculada no loop abaixo
-        let totalPedido = 0;
-        
-        let message = '🛒 *Novo Pedido - Mapeju Doces* 🛒\n\n';
-        message += '*Itens do Pedido:*\n';
-        
-        appData.cart.forEach(item => {
-            const product = allProducts.find(prod => prod.id === item.productId);
-            if (product) {
-                const itemTotal = product.price * item.quantity;
-                totalPedido += itemTotal;
-                message += `• ${item.quantity}x ${product.name} - R$ ${itemTotal.toFixed(2)}\n`;
-            }
-        });
-        
-        message += `\n*Total: R$ ${totalPedido.toFixed(2)}*\n\n`;
-        message += 'Por favor, confirme meu pedido com os dados para entrega. Obrigado!';
-        
-        const whatsappUrl = `https://wa.me/556294535053?text=${encodeURIComponent(message)}`;
-        
-        // Abrir WhatsApp em nova janela com propriedades seguras para evitar CORB
-        const newWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-        if (newWindow) {
-            newWindow.opener = null;
-        }
-        
-        // Mostrar confirmação
-        showOrderConfirmation();
-        
-        return true;
-    }
-
-    // Mostrar confirmação de pedido
-    function showOrderConfirmation() {
-        // Criar elemento de confirmação
-        const confirmationDiv = document.createElement('div');
-        confirmationDiv.className = 'order-confirmation';
-        confirmationDiv.innerHTML = `
-            <p><i class="fas fa-check-circle"></i> Seu pedido foi enviado para o WhatsApp!</p>
-            <p>Aguarde a confirmação da Mapeju Doces.</p>
-        `;
-        
-        // Adicionar ao carrinho
-        cartElement.appendChild(confirmationDiv);
-        
-        // Remover após 5 segundos
-        setTimeout(() => {
-            if (confirmationDiv.parentNode) {
-                confirmationDiv.parentNode.removeChild(confirmationDiv);
-            }
-        }, 5000);
+        // Usar a nova função de checkout
+        window.whatsappIntegration.sendToWhatsApp(cartItems);
     }
 
     // Expor funções globalmente
