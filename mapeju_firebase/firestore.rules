@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permitir leitura pública para todos
+    match /categories/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /products/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Outras coleções só podem ser acessadas por usuários autenticados
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

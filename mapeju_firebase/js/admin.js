@@ -21,6 +21,53 @@ document.addEventListener('DOMContentLoaded', function() {
     let adminCategoriesListener = null;
     let adminProductsListener = null;
 
+    // Gerenciadores de categorias e produtos
+    const categoryManager = {
+        async getCategories() {
+            const snapshot = await categoriesRef.get();
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        },
+        async addCategory(name) {
+            const docRef = await categoriesRef.add({ name });
+            return { id: docRef.id, name };
+        },
+        async updateCategory(id, name) {
+            await categoriesRef.doc(id).update({ name });
+            return true;
+        },
+        async deleteCategory(id) {
+            await categoriesRef.doc(id).delete();
+            return { success: true };
+        }
+    };
+
+    const productManager = {
+        async addProduct(categoryId, name, description, price, image) {
+            const docRef = await productsRef.add({
+                categoryId,
+                name,
+                description,
+                price: parseFloat(price),
+                image
+            });
+            return { id: docRef.id, categoryId, name, description, price: parseFloat(price), image };
+        },
+        async updateProduct(id, categoryId, name, description, price, image) {
+            await productsRef.doc(id).update({
+                categoryId,
+                name,
+                description,
+                price: parseFloat(price),
+                image
+            });
+            return true;
+        },
+        async deleteProduct(id) {
+            await productsRef.doc(id).delete();
+            return { success: true };
+        }
+    };
+
     // Fechar modal
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', function() {
@@ -152,14 +199,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Adicionar produto
     if (productForm) {
-        productForm.addEventListener('submit', function(e) {
+        // Preview de imagem
+        const productImageInput = document.getElementById('product-image');
+        const imagePreview = document.getElementById('image-preview');
+        const previewImg = document.getElementById('preview-img');
+
+        productImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            } else {
+                imagePreview.style.display = 'none';
+            }
+        });
+
+        productForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const categoryId = document.getElementById('product-category').value;
             const name = document.getElementById('product-name').value.trim();
             const description = document.getElementById('product-description').value.trim();
             const price = document.getElementById('product-price').value;
-            const image = document.getElementById('product-image').value.trim();
+            const imageFile = document.getElementById('product-image').files[0];
             
             if (categoryId && name && price) {
                 // Mostrar indicador de carregamento
@@ -168,27 +234,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adicionando...';
                 submitBtn.disabled = true;
                 
-                productManager.addProduct(categoryId, name, description, price, image)
-                    .then(function(newProduct) {
-                        if (newProduct) {
-                            // Limpar formulário
-                            document.getElementById('product-name').value = '';
-                            document.getElementById('product-description').value = '';
-                            document.getElementById('product-price').value = '';
-                            document.getElementById('product-image').value = '';
-                            
-                            showNotification('Produto adicionado com sucesso!', 'success');
-                        }
-                    })
-                    .catch(function(error) {
-                        console.error('Erro ao adicionar produto:', error);
-                        showNotification('Erro ao adicionar produto', 'error');
-                    })
-                    .finally(function() {
-                        // Restaurar botão
-                        submitBtn.innerHTML = originalBtnText;
-                        submitBtn.disabled = false;
-                    });
+                try {
+                    // Fazer upload da imagem se houver
+                    let imageUrl = '';
+                    if (imageFile) {
+                        imageUrl = await window.appFirebase.uploadProductImage(imageFile);
+                    }
+                    
+                    // Adicionar produto com URL da imagem
+                    const newProduct = await productManager.addProduct(categoryId, name, description, price, imageUrl);
+                    
+                    if (newProduct) {
+                        // Limpar formulário
+                        productForm.reset();
+                        imagePreview.style.display = 'none';
+                        showNotification('Produto adicionado com sucesso!', 'success');
+                    }
+                } catch (error) {
+                    console.error('Erro ao adicionar produto:', error);
+                    showNotification('Erro ao adicionar produto', 'error');
+                } finally {
+                    // Restaurar botão
+                    submitBtn.innerHTML = originalBtnText;
+                    submitBtn.disabled = false;
+                }
             } else {
                 showNotification('Por favor, preencha todos os campos obrigatórios.', 'error');
             }
@@ -483,20 +552,45 @@ document.addEventListener('DOMContentLoaded', function() {
         const productCard = document.createElement('div');
         productCard.className = 'admin-product-card';
         
-        // Verificar se a imagem existe
-        const imageUrl = product.image || 'img/default-product.jpg';
+        // Imagem padrão para casos sem imagem
+        const defaultImage = '/mapeju_firebase/img/default-product.png';
         
-        let imageHtml = '';
-        if (imageUrl) {
-            imageHtml = `
-                <div class="admin-product-image">
-                    <img src="${imageUrl}" alt="${product.name}" onerror="this.onerror=null; this.src='img/default-product.jpg'">
-                </div>
-            `;
+        // Criar elemento de imagem com loading
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'admin-product-image';
+        
+        const imageElement = document.createElement('img');
+        imageElement.alt = product.name;
+        imageElement.className = 'product-image loading';
+        
+        // Verificar se a imagem é uma referência ao Firestore
+        if (product.image && product.image.startsWith('firestore-image://')) {
+            // Carregar imagem do Firestore
+            window.appFirebase.loadProductImage(product.image)
+                .then(dataUrl => {
+                    imageElement.src = dataUrl;
+                    imageElement.classList.remove('loading');
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar imagem:', error);
+                    imageElement.src = defaultImage;
+                    imageElement.classList.remove('loading');
+                });
+        } else {
+            // URL normal ou sem imagem
+            imageElement.src = product.image || defaultImage;
+            imageElement.classList.remove('loading');
         }
         
+        // Configurar fallback para erro de carregamento
+        imageElement.onerror = function() {
+            this.src = defaultImage;
+            this.classList.remove('loading');
+        };
+        
+        imageContainer.appendChild(imageElement);
+        
         productCard.innerHTML = `
-            ${imageHtml}
             <div class="admin-product-info">
                 <h4>${product.name}</h4>
                 <p class="admin-product-category"><strong>Categoria:</strong> ${category.name}</p>
@@ -508,6 +602,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         `;
+        
+        // Inserir container de imagem no início do card
+        productCard.insertBefore(imageContainer, productCard.firstChild);
         
         // Adicionar event listeners para os botões
         const editBtn = productCard.querySelector('.edit-btn');
@@ -538,8 +635,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 const editForm = document.createElement('form');
                 editForm.className = 'edit-product-form';
                 
+                // Adicionar preview da imagem atual se existir
+                const currentImageHtml = product.image ? 
+                    `<div class="current-image" style="margin-bottom: 15px;">
+                        <p>Imagem atual:</p>
+                        <img src="${product.image}" alt="${product.name}" style="max-width: 200px; max-height: 200px;">
+                    </div>` : '';
+                
                 editForm.innerHTML = `
                     <h3>Editar Produto</h3>
+                    ${currentImageHtml}
                     <div class="form-group">
                         <label for="edit-product-category">Categoria:</label>
                         <select id="edit-product-category" required>
@@ -559,8 +664,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         <input type="number" id="edit-product-price" step="0.01" min="0" value="${product.price}" required>
                     </div>
                     <div class="form-group">
-                        <label for="edit-product-image">URL da Imagem:</label>
-                        <input type="text" id="edit-product-image" value="${product.image || ''}">
+                        <label for="edit-product-image">Nova imagem (opcional):</label>
+                        <input type="file" id="edit-product-image" accept="image/*">
+                        <div id="edit-image-preview" style="margin-top: 10px; max-width: 200px; display: none;">
+                            <img id="edit-preview-img" style="width: 100%; height: auto;" />
+                        </div>
                     </div>
                     <div class="form-buttons">
                         <button type="submit" class="primary-btn">Salvar Alterações</button>
@@ -580,6 +688,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 document.body.appendChild(modal);
                 
+                // Preview da nova imagem
+                const editImageInput = document.getElementById('edit-product-image');
+                const editImagePreview = document.getElementById('edit-image-preview');
+                const editPreviewImg = document.getElementById('edit-preview-img');
+                
+                if (editImageInput) {
+                    editImageInput.addEventListener('change', function(e) {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                editPreviewImg.src = e.target.result;
+                                editImagePreview.style.display = 'block';
+                            }
+                            reader.readAsDataURL(file);
+                        } else {
+                            editImagePreview.style.display = 'none';
+                        }
+                    });
+                }
+                
                 // Cancelar edição
                 document.getElementById('cancel-edit').addEventListener('click', function() {
                     document.body.removeChild(modal);
@@ -593,14 +722,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Processar formulário de edição
-                editForm.addEventListener('submit', function(e) {
+                editForm.addEventListener('submit', async function(e) {
                     e.preventDefault();
                     
                     const categoryId = document.getElementById('edit-product-category').value;
                     const name = document.getElementById('edit-product-name').value.trim();
                     const description = document.getElementById('edit-product-description').value.trim();
                     const price = document.getElementById('edit-product-price').value;
-                    const image = document.getElementById('edit-product-image').value.trim();
+                    const imageFile = document.getElementById('edit-product-image').files[0];
                     
                     if (categoryId && name && price) {
                         // Mostrar indicador de carregamento
@@ -609,22 +738,30 @@ document.addEventListener('DOMContentLoaded', function() {
                         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
                         submitBtn.disabled = true;
                         
-                        productManager.updateProduct(product.id, categoryId, name, description, price, image)
-                            .then(function(success) {
-                                if (success) {
-                                    document.body.removeChild(modal);
-                                    showNotification('Produto atualizado com sucesso!', 'success');
-                                }
-                            })
-                            .catch(function(error) {
-                                console.error('Erro ao atualizar produto:', error);
-                                showNotification('Erro ao atualizar produto', 'error');
-                            })
-                            .finally(function() {
-                                // Restaurar botão
-                                submitBtn.innerHTML = originalBtnText;
-                                submitBtn.disabled = false;
-                            });
+                        try {
+                            // Se tiver um novo arquivo de imagem, fazer upload
+                            let imageUrl = product.image; // Manter URL atual por padrão
+                            if (imageFile) {
+                                imageUrl = await window.appFirebase.uploadProductImage(imageFile);
+                            }
+                            
+                            // Atualizar produto
+                            const success = await productManager.updateProduct(
+                                product.id, categoryId, name, description, price, imageUrl
+                            );
+                            
+                            if (success) {
+                                document.body.removeChild(modal);
+                                showNotification('Produto atualizado com sucesso!', 'success');
+                            }
+                        } catch (error) {
+                            console.error('Erro ao atualizar produto:', error);
+                            showNotification('Erro ao atualizar produto', 'error');
+                        } finally {
+                            // Restaurar botão
+                            submitBtn.innerHTML = originalBtnText;
+                            submitBtn.disabled = false;
+                        }
                     } else {
                         showNotification('Por favor, preencha todos os campos obrigatórios.', 'error');
                     }
@@ -693,4 +830,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+
+    // Função para renderizar imagem do produto
+    function renderProductImage(imageUrl) {
+        const defaultImage = '/mapeju_firebase/img/default-product.png';
+        const imageElement = document.createElement('img');
+        imageElement.className = 'product-image';
+        imageElement.src = imageUrl || defaultImage;
+        imageElement.onerror = function() {
+            this.src = defaultImage;
+        };
+        return imageElement;
+    }
 });

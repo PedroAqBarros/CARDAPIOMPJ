@@ -1,4 +1,3 @@
-// Aplicação principal do cardápio digital com sincronização em tempo real
 document.addEventListener('DOMContentLoaded', function() {
     // Elementos do DOM
     const categoriesContainer = document.querySelector('.categories');
@@ -297,87 +296,119 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Mostrar indicador de carregamento
-        productsContainer.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando produtos...</div>';
+        productsContainer.innerHTML = '<div class="loading">Carregando produtos...</div>';
         
         // Iniciar sincronização de produtos para a categoria selecionada
         productsListener = productsRef
             .where('categoryId', '==', categoryId)
-            .orderBy('name')
             .onSnapshot(snapshot => {
-                const products = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                
-                renderProductsByCategory(products);
-            }, error => {
-                console.error('Erro ao sincronizar produtos:', error);
-                showNotification('Erro ao carregar produtos', 'error');
-                
-                productsContainer.innerHTML = '<div class="error-message">Erro ao carregar produtos</div>';
-            });
-    }
+                // Limpar container
+                productsContainer.innerHTML = '';
 
-    // Renderizar produtos por categoria
-    function renderProductsByCategory(products) {
-        productsContainer.innerHTML = '';
-        
-        if (products.length === 0) {
-            productsContainer.innerHTML = '<div class="empty-message">Nenhum produto disponível nesta categoria</div>';
-            return;
-        }
-        
-        // Imagem em base64 minimalista (1x1 pixel transparente)
-        const fallbackImage = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        
-        products.forEach(product => {
-            const productCard = document.createElement('div');
-            productCard.className = 'product-card';
-            
-            // Usar a imagem base64 como fallback
-            const imageUrl = product.image || fallbackImage;
-            
-            productCard.innerHTML = `
-                <div class="product-image-container">
-                    <img src="${imageUrl}" alt="${product.name}" class="product-image" 
-                         onerror="this.src='${fallbackImage}'">
-                </div>
-                <div class="product-info">
-                    <h3 class="product-name">${product.name}</h3>
-                    <p class="product-description">${product.description || ''}</p>
-                    <p class="product-price">R$ ${parseFloat(product.price).toFixed(2)}</p>
-                    <button class="add-to-cart-btn" data-id="${product.id}">
-                        <i class="fas fa-cart-plus"></i> Adicionar
-                    </button>
-                </div>
-            `;
-            
-            // Adicionar evento ao botão de adicionar ao carrinho
-            const addToCartBtn = productCard.querySelector('.add-to-cart-btn');
-            addToCartBtn.addEventListener('click', function() {
-                const productId = this.getAttribute('data-id');
-                cartManager.addToCart(productId);
-                renderCart();
-                updateCartBadge();
-                
-                // Feedback visual
-                this.innerHTML = '<i class="fas fa-check"></i> Adicionado';
-                this.classList.add('added-to-cart');
-                
-                // Restaurar após 1 segundo
-                setTimeout(() => {
-                    this.innerHTML = '<i class="fas fa-cart-plus"></i> Adicionar';
-                    this.classList.remove('added-to-cart');
-                }, 1000);
+                if (snapshot.empty) {
+                    // Mostrar mensagem quando não há produtos
+                    const emptyMessage = document.createElement('div');
+                    emptyMessage.className = 'empty-products-message';
+                    emptyMessage.innerHTML = `
+                        <i class="fas fa-box-open"></i>
+                        <p>Nenhum produto encontrado nesta categoria</p>
+                    `;
+                    productsContainer.appendChild(emptyMessage);
+                    return;
+                }
+
+                // Filtrar produtos ativos e ordenar por nome
+                const products = snapshot.docs
+                    .map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }))
+                    .filter(product => product.active !== false)
+                    .sort((a, b) => a.name.localeCompare(b.name));
+
+                // Renderizar produtos
+                products.forEach(product => {
+                    const productElement = document.createElement('div');
+                    productElement.className = 'product-card';
+                    
+                    // Tratamento da imagem com fallback
+                    const imageContainer = document.createElement('div');
+                    imageContainer.className = 'product-image-container';
+                    
+                    const imageElement = document.createElement('img');
+                    imageElement.className = 'product-image loading';
+                    imageElement.alt = product.name;
+
+                    // Verificar todas as possíveis propriedades de imagem
+                    const imageUrl = product.image || product.imageUrl || product.imagemUrl || null;
+                    
+                    if (!imageUrl) {
+                        imageElement.src = '/mapeju_firebase/img/default-product.png';
+                        imageElement.classList.remove('loading');
+                    } else if (imageUrl.startsWith('firestore-image://')) {
+                        // Carregar imagem do Firestore
+                        window.appFirebase.loadProductImage(imageUrl)
+                            .then(dataUrl => {
+                                if (dataUrl) {
+                                    imageElement.src = dataUrl;
+                                } else {
+                                    imageElement.src = '/mapeju_firebase/img/default-product.png';
+                                }
+                                imageElement.classList.remove('loading');
+                                console.log('Imagem carregada:', imageUrl);
+                            })
+                            .catch(error => {
+                                console.error('Erro ao carregar imagem:', error);
+                                imageElement.src = '/mapeju_firebase/img/default-product.png';
+                                imageElement.classList.remove('loading');
+                            });
+                    } else {
+                        // URL direta
+                        imageElement.src = imageUrl;
+                        imageElement.classList.remove('loading');
+                    }
+
+                    imageElement.onerror = function() {
+                        this.src = '/mapeju_firebase/img/default-product.png';
+                        this.classList.remove('loading');
+                    };
+
+                    imageContainer.appendChild(imageElement);
+
+                    productElement.innerHTML = `
+                        <div class="product-info">
+                            <h3 class="product-name">${product.name}</h3>
+                            <p class="product-description">${product.description || ''}</p>
+                            <p class="product-price">R$ ${product.price.toFixed(2)}</p>
+                            <button class="add-to-cart-btn" data-product-id="${product.id}">
+                                <i class="fas fa-plus"></i> Adicionar
+                            </button>
+                        </div>
+                    `;
+
+                    // Inserir container de imagem no início do card
+                    productElement.insertBefore(imageContainer, productElement.firstChild);
+
+                    // Adicionar evento ao botão
+                    const addButton = productElement.querySelector('.add-to-cart-btn');
+                    addButton.addEventListener('click', function() {
+                        cartManager.addToCart(product.id);
+                        renderCart();
+                        updateCartBadge();
+                        showNotification('Produto adicionado ao carrinho!', 'success');
+                    });
+
+                    productsContainer.appendChild(productElement);
+                });
+            }, error => {
+                console.error('Erro ao carregar produtos:', error);
+                productsContainer.innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Erro ao carregar produtos. Por favor, tente novamente.</p>
+                    </div>
+                `;
             });
-            
-            productsContainer.appendChild(productCard);
-        });
-        
-        // Adicionar botões de pedido rápido
-        if (typeof whatsappIntegration !== 'undefined' && whatsappIntegration.addQuickOrderButtons) {
-            setTimeout(whatsappIntegration.addQuickOrderButtons, 500);
-        }
     }
 
     // Renderizar carrinho
