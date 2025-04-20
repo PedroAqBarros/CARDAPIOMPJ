@@ -1,3 +1,18 @@
+// Referência ao endereço da loja do arquivo delivery.js
+// Se STORE_LOCATION não estiver disponível, definimos um endereço padrão
+const STORE_ADDRESS = {
+    address: 'R. X-25, 23 - Jardim Olimpico, Aparecida de Goiânia - GO, 74922-310'
+};
+
+// Obter endereço da loja de forma segura
+function getStoreAddress() {
+    // Verificar se STORE_LOCATION está disponível globalmente
+    if (typeof STORE_LOCATION !== 'undefined') {
+        return STORE_LOCATION.address;
+    }
+    return STORE_ADDRESS.address;
+}
+
 // Integração com WhatsApp
 function sendWhatsAppMessage(cartItems, total) {
     const phoneNumber = "5562994535053"; // Número do WhatsApp
@@ -89,6 +104,8 @@ function formatFullAddress(mainAddress, quadra, lote, complemento) {
 
 // Função para enviar pedido para WhatsApp
 function sendToWhatsApp(cartItems) {
+    console.log('Iniciando processo de envio de pedido para WhatsApp', cartItems);
+    
     const modal = document.getElementById('checkout-modal');
     const form = document.getElementById('checkout-form');
     const addressInput = document.getElementById('customer-address');
@@ -97,6 +114,13 @@ function sendToWhatsApp(cartItems) {
     const complementoInput = document.getElementById('complemento');
     const paymentMethod = document.getElementById('payment-method');
     const changeContainer = document.getElementById('change-container');
+    
+    // Verificar elementos obrigatórios
+    if (!modal || !form) {
+        console.error('Erro: Elementos do checkout não encontrados', { modal, form });
+        alert('Erro ao iniciar o checkout. Por favor, tente novamente.');
+        return;
+    }
     
     // Obter os elementos diretamente pelos IDs
     const orderSubtotalElement = document.getElementById('order-subtotal');
@@ -143,6 +167,7 @@ function sendToWhatsApp(cartItems) {
     
     // Processar formulário
     form.onsubmit = async function(e) {
+        console.log('Formulário de checkout enviado!');
         e.preventDefault();
         
         try {
@@ -162,6 +187,7 @@ function sendToWhatsApp(cartItems) {
             
             // Obter o tipo de entrega selecionado
             const deliveryType = document.querySelector('input[name="delivery-type"]:checked').value;
+            console.log('Tipo de entrega selecionado:', deliveryType);
             
             // Verificar campos obrigatórios apenas se for entrega
             if (deliveryType === 'delivery') {
@@ -205,9 +231,14 @@ function sendToWhatsApp(cartItems) {
                     );
                     fee = deliveryInfo.fee;
                 } catch (err) {
+                    console.error('Erro ao calcular taxa de entrega:', err);
                     alert('Erro ao calcular taxa de entrega: ' + err.message);
                     return;
                 }
+            } else {
+                // No modo pickup, garantir que o botão esteja habilitado e a taxa seja zero
+                fee = 0;
+                console.log('Modo pickup selecionado, taxa de entrega é zero');
             }
             const total = subtotal + fee;
             
@@ -233,7 +264,7 @@ function sendToWhatsApp(cartItems) {
                 message += `Endereço: ${fullAddress}\n`;
             } else {
                 message += `Forma de Recebimento: Retirada no Local\n`;
-                message += `Endereço da Loja: ${STORE_LOCATION.address}\n`;
+                message += `Endereço da Loja: ${getStoreAddress()}\n`;
             }
             
             message += `Forma de Pagamento: ${formatPaymentMethod(paymentMethodValue)}`;
@@ -287,6 +318,26 @@ function sendToWhatsApp(cartItems) {
     
     // Mostrar modal
     modal.style.display = 'block';
+    
+    // Se o modo de entrega for pickup, habilitar o botão de checkout
+    const initialDeliveryType = document.querySelector('input[name="delivery-type"]:checked')?.value;
+    const submitButton = form.querySelector('.submit-btn');
+    
+    if (initialDeliveryType === 'pickup' && submitButton) {
+        console.log('Habilitando o botão de checkout para o modo pickup');
+        submitButton.disabled = false;
+    }
+    
+    // Adicionar listener para mudança no tipo de entrega
+    const deliveryOptions = document.querySelectorAll('input[name="delivery-type"]');
+    deliveryOptions.forEach(option => {
+        option.addEventListener('change', function() {
+            if (this.value === 'pickup' && submitButton) {
+                console.log('Modo pickup selecionado, habilitando botão');
+                submitButton.disabled = false;
+            }
+        });
+    });
     
     // Verificar se o modal foi aberto em um dispositivo móvel
     if (window.innerWidth < 768) {

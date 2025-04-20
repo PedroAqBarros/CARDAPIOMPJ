@@ -14,7 +14,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeCartBtn = document.getElementById('close-cart-btn');
     const categoriesLoading = document.getElementById('categories-loading');
 
-    // Referenciar objetos do Firebase vindos da API compat
+    // Verificar se o Firebase foi inicializado corretamente
+    if (!window.appFirebase) {
+        console.error('Firebase não inicializado. Verifique se os scripts do Firebase foram carregados corretamente.');
+        showStartupError('Não foi possível conectar ao banco de dados. Por favor, recarregue a página.');
+        return;
+    }
+
+    // Referenciar objetos do Firebase
     const { db, auth, categoriesRef, productsRef, cartsRef, generateId, showNotification } = window.appFirebase;
 
     // Variáveis para controle de estado
@@ -27,11 +34,39 @@ document.addEventListener('DOMContentLoaded', function() {
         cart: []
     };
 
+    // Função para mostrar erro de inicialização
+    function showStartupError(message) {
+        // Mostrar mensagem de erro para o usuário
+        const errorBanner = document.createElement('div');
+        errorBanner.style.backgroundColor = '#f8d7da';
+        errorBanner.style.color = '#721c24';
+        errorBanner.style.padding = '10px';
+        errorBanner.style.margin = '10px 0';
+        errorBanner.style.borderRadius = '4px';
+        errorBanner.style.textAlign = 'center';
+        errorBanner.innerHTML = `
+            <i class="fas fa-exclamation-circle"></i> 
+            ${message}
+            <br>
+            <button id="reload-btn" style="margin-top: 10px; padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Recarregar Página
+            </button>
+        `;
+        
+        // Inserir no topo do conteúdo
+        document.querySelector('.container').prepend(errorBanner);
+        
+        // Adicionar listener para o botão de recarregar
+        document.getElementById('reload-btn').addEventListener('click', () => {
+            window.location.reload();
+        });
+    }
+
     // Gerenciador de produtos
     const productManager = {
         async getProducts() {
             try {
-                const snapshot = await productsRef.get();
+                const snapshot = await window.appFirebase.productsRef.get();
                 return snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
@@ -228,16 +263,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 cartElement.classList.remove('open');
             });
         }
+        
+        // Verificar se o checkout está funcionando corretamente
+        // Isso serve apenas para debug, a função sendToWhatsApp já configura o formulário
+        const checkoutForm = document.getElementById('checkout-form');
+        if (checkoutForm) {
+            console.log('Formulário de checkout encontrado');
+            // Adicionar listener para verificar se o evento submit está sendo disparado
+            checkoutForm.addEventListener('submit', function(e) {
+                console.log('Evento submit do formulário de checkout capturado manualmente');
+                // Não prevenir o comportamento padrão aqui, deixar a função sendToWhatsApp lidar com isso
+            });
+        }
     }
 
     // Iniciar sincronização em tempo real
     function startRealtimeSync() {
-        // Sincronizar categorias em tempo real
+        // Cancelar listeners anteriores
         if (categoriesListener) {
             categoriesListener();
         }
         
-        categoriesListener = categoriesRef.orderBy('name').onSnapshot(snapshot => {
+        // Iniciar sincronização de categorias
+        categoriesListener = window.appFirebase.categoriesRef.orderBy('name').onSnapshot(snapshot => {
             const categories = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
@@ -245,23 +293,28 @@ document.addEventListener('DOMContentLoaded', function() {
             
             renderCategories(categories);
             
-            // Se houver categorias e nenhuma estiver selecionada, selecionar a primeira
-            if (categories.length > 0 && !selectedCategoryId) {
+            // Se houver uma categoria selecionada, manter a seleção
+            if (selectedCategoryId) {
+                // Verificar se a categoria ainda existe
+                const categoryExists = categories.some(cat => cat.id === selectedCategoryId);
+                if (categoryExists) {
+                    selectCategory(selectedCategoryId);
+                } else if (categories.length > 0) {
+                    // Se a categoria não existir mais, selecionar a primeira
+                    selectCategory(categories[0].id);
+                }
+            } else if (categories.length > 0) {
+                // Se não houver categoria selecionada, selecionar a primeira
                 selectCategory(categories[0].id);
             }
-            
-            // Ocultar spinner de carregamento
-            if (categoriesLoading) {
-                categoriesLoading.style.display = 'none';
-            }
         }, error => {
-            console.error('Erro ao sincronizar categorias:', error);
-            showNotification('Erro ao carregar categorias', 'error');
-            
-            // Ocultar spinner de carregamento em caso de erro
+            console.error('Erro ao carregar categorias:', error);
             if (categoriesLoading) {
-                categoriesLoading.style.display = 'none';
-                categoriesLoading.innerHTML = '<p class="error-message">Erro ao carregar categorias</p>';
+                categoriesLoading.innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-circle"></i> Erro ao carregar categorias
+                    </div>
+                `;
             }
         });
     }
@@ -340,7 +393,7 @@ document.addEventListener('DOMContentLoaded', function() {
         productsContainer.innerHTML = '<div class="loading">Carregando produtos...</div>';
         
         // Iniciar sincronização de produtos para a categoria selecionada
-        productsListener = productsRef
+        productsListener = window.appFirebase.productsRef
             .where('categoryId', '==', categoryId)
             .onSnapshot(snapshot => {
                 // Limpar container
@@ -638,9 +691,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 addressContainer.style.display = 'none';
                 document.getElementById('customer-address').value = '';
                 if (deliveryFeeInfo) {
-                    deliveryFeeInfo.textContent = 'Retirada gratuita na loja';
+                    deliveryFeeInfo.innerHTML = '<p class="fee-info" style="color: #28a745;"><i class="fas fa-store"></i> Retirada gratuita na loja</p>';
                 }
-                window.currentDeliveryInfo = {
+                window.currentDelivery = {
                     fee: 0,
                     distance: 0,
                     type: 'pickup'
@@ -649,6 +702,28 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 addressContainer.style.display = 'block';
                 calculateDeliveryFee();
+            }
+        }
+        
+        // Função para atualizar o total quando o modo pickup é selecionado
+        function updateTotal() {
+            const orderSubtotalElement = document.getElementById('order-subtotal');
+            const deliveryFeeElement = document.getElementById('delivery-fee');
+            const orderTotalElement = document.getElementById('order-total');
+            const checkoutButton = document.querySelector('.submit-btn');
+            
+            if (deliveryFeeElement) {
+                deliveryFeeElement.textContent = 'R$ 0,00';
+            }
+            
+            if (orderSubtotalElement && orderTotalElement) {
+                const subtotal = parseFloat(orderSubtotalElement.textContent.replace(/[^\d,\.]/g, '').replace(',', '.')) || 0;
+                orderTotalElement.textContent = `R$ ${subtotal.toFixed(2)}`;
+            }
+            
+            // Habilitar botão de checkout
+            if (checkoutButton) {
+                checkoutButton.disabled = false;
             }
         }
 

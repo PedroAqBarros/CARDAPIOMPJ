@@ -313,15 +313,16 @@ async function loadProductImage(imageData) {
     }
 }
 
-// Disponibilizar objetos e funções globalmente
+// Exportar objetos do Firebase para uso em outros scripts
 window.appFirebase = {
-    db,
-    auth,
-    categoriesRef,
-    productsRef,
-    cartsRef,
-    generateId,
-    showNotification,
-    uploadProductImage,
-    loadProductImage
+  db,
+  auth,
+  categoriesRef,
+  productsRef,
+  cartsRef,
+  imagesRef,
+  generateId,
+  showNotification,
+  uploadProductImage,
+  loadProductImage
 };

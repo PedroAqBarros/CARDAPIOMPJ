@@ -21,50 +21,67 @@ document.addEventListener('DOMContentLoaded', function() {
     let adminCategoriesListener = null;
     let adminProductsListener = null;
 
-    // Gerenciadores de categorias e produtos
+    // Gerenciador de categorias
     const categoryManager = {
         async getCategories() {
-            const snapshot = await categoriesRef.get();
+            const snapshot = await window.appFirebase.categoriesRef.get();
             return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         },
+        
         async addCategory(name) {
-            const docRef = await categoriesRef.add({ name });
-            return { id: docRef.id, name };
+            const docRef = await window.appFirebase.categoriesRef.add({ name });
+            return docRef.id;
         },
+        
         async updateCategory(id, name) {
-            await categoriesRef.doc(id).update({ name });
-            return true;
+            await window.appFirebase.categoriesRef.doc(id).update({ name });
         },
+        
         async deleteCategory(id) {
-            await categoriesRef.doc(id).delete();
-            return { success: true };
+            // Primeiro, exclua todos os produtos associados a esta categoria
+            const productsSnapshot = await window.appFirebase.productsRef.where('categoryId', '==', id).get();
+            
+            // Usar batch para excluir múltiplos documentos
+            const batch = window.appFirebase.db.batch();
+            productsSnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            
+            // Excluir a categoria
+            batch.delete(window.appFirebase.categoriesRef.doc(id));
+            
+            // Confirmar a operação em lote
+            await batch.commit();
         }
     };
 
+    // Gerenciador de produtos
     const productManager = {
         async addProduct(categoryId, name, description, price, image) {
-            const docRef = await productsRef.add({
+            const docRef = await window.appFirebase.productsRef.add({
                 categoryId,
                 name,
-                description,
+                description: description || '',
                 price: parseFloat(price),
-                image
+                image: image || '',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            return { id: docRef.id, categoryId, name, description, price: parseFloat(price), image };
+            return docRef.id;
         },
+        
         async updateProduct(id, categoryId, name, description, price, image) {
-            await productsRef.doc(id).update({
+            await window.appFirebase.productsRef.doc(id).update({
                 categoryId,
                 name,
-                description,
+                description: description || '',
                 price: parseFloat(price),
-                image
+                image: image || '',
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            return true;
         },
+        
         async deleteProduct(id) {
-            await productsRef.doc(id).delete();
-            return { success: true };
+            await window.appFirebase.productsRef.doc(id).delete();
         }
     };
 
@@ -95,7 +112,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
             submitBtn.disabled = true;
             
-            auth.signInWithEmailAndPassword(email, password)
+            window.appFirebase.auth.signInWithEmailAndPassword(email, password)
                 .then(function(userCredential) {
                     // Login bem-sucedido
                     adminModal.style.display = 'none';
@@ -130,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Logout
     if (adminLogoutBtn) {
         adminLogoutBtn.addEventListener('click', function() {
-            auth.signOut()
+            window.appFirebase.auth.signOut()
                 .then(function() {
                     adminPanel.style.display = 'none';
                     showNotification('Logout realizado com sucesso', 'success');
@@ -289,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Iniciar novo listener
-        adminCategoriesListener = categoriesRef.orderBy('name').onSnapshot(snapshot => {
+        adminCategoriesListener = window.appFirebase.categoriesRef.orderBy('name').onSnapshot(snapshot => {
             const categories = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
@@ -327,7 +344,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Iniciar novo listener
-        adminProductsListener = productsRef.orderBy('name').onSnapshot(snapshot => {
+        adminProductsListener = window.appFirebase.productsRef.orderBy('name').onSnapshot(snapshot => {
             const products = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
@@ -792,7 +809,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Verificar estado de autenticação
-    auth.onAuthStateChanged(function(user) {
+    window.appFirebase.auth.onAuthStateChanged(function(user) {
         if (user) {
             // Usuário está logado
             if (adminPanel) {

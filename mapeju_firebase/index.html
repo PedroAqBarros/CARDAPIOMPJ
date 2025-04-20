@@ -989,7 +989,23 @@
         </div>
     </div>
 
-    <!-- Update script imports -->
+    <!-- Google Maps API -->
+    <script>
+        function initMap() {
+            console.log('Google Maps carregado');
+            // Notifica que o Google Maps foi carregado
+            window.dispatchEvent(new Event('google_maps_loaded'));
+        }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBrimCGWjJF76ptFZu7frm0hB9iw4Ty0p8&libraries=places&callback=initMap&loading=async"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    
+    <!-- Scripts da aplicação -->
     <script src="js/firebase-config.js"></script>
     <script src="js/admin.js"></script>
     <script src="js/app.js"></script>
