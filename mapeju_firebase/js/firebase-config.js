@@ -8,7 +8,14 @@
 import config from './config.js';
 
 // Configuração do Firebase
-const firebaseConfig = config.firebase;
+const firebaseConfig = {
+    apiKey: "AIzaSyBrimCGWjJF76ptFZu7frm0hB9iw4Ty0p8",
+    authDomain: "mapeju-delivery.firebaseapp.com",
+    projectId: "mapeju-delivery",
+    storageBucket: "mapeju-delivery.appspot.com",
+    messagingSenderId: "1234567890",
+    appId: "1:1234567890:web:abcdef1234567890"
+};
 
 // Inicializar o Firebase
 firebase.initializeApp(firebaseConfig);
@@ -332,3 +339,5 @@ window.appFirebase = {
     }
   }
 };
+
+export default firebaseConfig;
