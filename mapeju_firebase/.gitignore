@@ -67,3 +67,26 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Ignorar arquivos com chaves de API e outras informações sensíveis
+/js/config.js
+
+# Ignorar arquivos de ambiente
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Ignorar diretórios de compilação
+build/
+dist/
+
+# Ignorar arquivos de configuração IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Ignorar arquivos do sistema operacional
+.DS_Store
+Thumbs.db

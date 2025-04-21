@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (existingItemIndex !== -1) {
                 appData.cart[existingItemIndex].quantity += 1;
-            } else {
+                } else {
                 // Criar novo item com os sabores selecionados
                 appData.cart.push({
                     productId: product.id,
@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
             
-            this.saveCart();
+                this.saveCart();
             renderCart();
             updateCartBadge();
         },
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (itemIndex !== -1) {
                 appData.cart.splice(itemIndex, 1);
-                this.saveCart();
+            this.saveCart();
             }
         },
         
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     appData.cart.splice(itemIndex, 1);
                 }
-                this.saveCart();
+            this.saveCart();
             }
         },
         
@@ -383,22 +383,22 @@ document.addEventListener('DOMContentLoaded', function() {
             await configManager.init();
             
             // Inicializar o carrinho do localStorage
-            cartManager.loadCart();
+        cartManager.loadCart();
             
             // Verificar se o carrinho foi carregado corretamente
             console.log('Carrinho inicializado com', appData.cart.length, 'itens');
-            
-            // Configurar eventos
-            setupEventListeners();
-            
-            // Renderizar carrinho
-            renderCart();
-            
-            // Atualizar badge do carrinho
-            updateCartBadge();
-            
-            // Iniciar sincronização em tempo real
-            startRealtimeSync();
+        
+        // Configurar eventos
+        setupEventListeners();
+        
+        // Renderizar carrinho
+        renderCart();
+        
+        // Atualizar badge do carrinho
+        updateCartBadge();
+        
+        // Iniciar sincronização em tempo real
+        startRealtimeSync();
         } catch (error) {
             console.error('Erro ao inicializar aplicação:', error);
             showStartupError('Houve um erro ao inicializar a aplicação. Por favor, recarregue a página.');
@@ -414,19 +414,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 floatingCartBtn.addEventListener('click', function() {
                     if (cartElement) {
                         cartElement.classList.add('open');
-                    }
-                });
-            }
-            
+                }
+            });
+        }
+
             // Botão para fechar o carrinho
             if (closeCartBtn) {
                 console.log('Configurando botão para fechar o carrinho');
                 closeCartBtn.addEventListener('click', function() {
                     if (cartElement) {
                         cartElement.classList.remove('open');
-                    }
-                });
-            }
+                }
+            });
+        }
 
             // Event listener para o botão de finalizar pedido
             const checkoutButton = document.getElementById('checkoutButton');
@@ -615,7 +615,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showNotification('Por favor, informe seu nome', 'error');
                 return;
             }
-
+            
             // Obter tipo de entrega
             const deliveryOptions = document.getElementsByName('delivery-type');
             for (const option of deliveryOptions) {
@@ -724,8 +724,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // Codificar a mensagem para URL
         const encodedMessage = encodeURIComponent(message);
         
-        // Construir o link do WhatsApp usando o número correto do link fornecido
-        const phoneNumber = '556294535053';
+        // Obter o número do WhatsApp do arquivo de configuração ou usar o valor padrão
+        let phoneNumber;
+        try {
+            if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.WHATSAPP_NUMBER) {
+                phoneNumber = APP_CONFIG.WHATSAPP_NUMBER;
+            } else {
+                // Fallback para o número padrão se o arquivo de configuração não estiver disponível
+                phoneNumber = '556294535053';
+            }
+        } catch (error) {
+            console.warn('Erro ao obter número do WhatsApp de config.js. Usando número padrão:', error);
+            phoneNumber = '556294535053';
+        }
+        
         const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
         
         console.log('Link WhatsApp gerado:', whatsappLink);
@@ -920,7 +932,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .where('categoryId', '==', categoryId)
             .onSnapshot(snapshot => {
                 // Limpar container
-                productsContainer.innerHTML = '';
+        productsContainer.innerHTML = '';
         
                 if (snapshot.empty) {
                     // Mostrar mensagem quando não há produtos
@@ -1299,7 +1311,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
                 }
-                
+
                 itemPrice.textContent = `Total: R$ ${itemTotalPrice.toFixed(2)}`;
                 itemInfo.appendChild(itemPrice);
                 
@@ -1364,9 +1376,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const cartTotalElement = document.getElementById('cartTotal');
         if (!cartTotalElement) {
             console.warn('Elemento cartTotal não encontrado no DOM');
-            return;
-        }
-        
+                return;
+            }
+
         // Garantir que o total seja um número válido
         if (isNaN(total) || total === null || total === undefined) {
             console.warn('Total inválido:', total);

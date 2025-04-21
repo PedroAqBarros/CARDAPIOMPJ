@@ -5,17 +5,30 @@
 // import { getFirestore, collection, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 // import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
-import config from './config.js';
+// Usar configuração do arquivo config.js se disponível, ou usar fallback
+let firebaseConfig;
 
-// Configuração do Firebase
-const firebaseConfig = {
-    apiKey: "AIzaSyBrimCGWjJF76ptFZu7frm0hB9iw4Ty0p8",
-    authDomain: "mapeju-delivery.firebaseapp.com",
-    projectId: "mapeju-delivery",
-    storageBucket: "mapeju-delivery.appspot.com",
-    messagingSenderId: "1234567890",
-    appId: "1:1234567890:web:abcdef1234567890"
-};
+try {
+  // Verificar se APP_CONFIG está definido (vem do arquivo config.js)
+  if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.FIREBASE_CONFIG) {
+    console.log('Usando configuração do arquivo config.js');
+    firebaseConfig = APP_CONFIG.FIREBASE_CONFIG;
+  } else {
+    throw new Error('Configuração não encontrada em config.js');
+  }
+} catch (error) {
+  console.warn('Arquivo config.js não encontrado ou configuração inválida. Usando configuração de fallback.', error);
+  
+  // Configuração de fallback (para desenvolvimento local apenas)
+  firebaseConfig = {
+    apiKey: "CHAVE_API_FIREBASE",
+    authDomain: "mapeju-cardapio.firebaseapp.com",
+    projectId: "mapeju-cardapio",
+    storageBucket: "mapeju-cardapio.appspot.com",
+    messagingSenderId: "1055368224770",
+    appId: "1:1055368224770:web:f3a5771fc333f192a3071b"
+  };
+}
 
 // Inicializar o Firebase
 firebase.initializeApp(firebaseConfig);
@@ -339,5 +352,3 @@ window.appFirebase = {
     }
   }
 };
-
-export default firebaseConfig;
