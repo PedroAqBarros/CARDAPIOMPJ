@@ -984,14 +984,19 @@
     </div>
 
     <!-- Google Maps API -->
-    <script>
-        function initMap() {
+    <script type="module">
+        import config from './js/config.js';
+        
+        window.initMap = function() {
             console.log('Google Maps carregado');
-            // Notifica que o Google Maps foi carregado
             window.dispatchEvent(new Event('google_maps_loaded'));
         }
+        
+        // Carregar Google Maps API com a chave segura
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${config.googleMaps.apiKey}&libraries=places&callback=initMap&loading=async`;
+        document.head.appendChild(script);
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBrimCGWjJF76ptFZu7frm0hB9iw4Ty0p8&libraries=places&callback=initMap&loading=async"></script>
     
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>

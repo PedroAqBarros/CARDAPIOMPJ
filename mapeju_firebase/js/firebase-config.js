@@ -5,16 +5,10 @@
 // import { getFirestore, collection, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 // import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
+import config from './config.js';
+
 // Configuração do Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyBzGL3MFuCDUUmR8rY1eshqB8S5SRKBVZI",
-  authDomain: "mapeju-cardapio.firebaseapp.com",
-  projectId: "mapeju-cardapio",
-  storageBucket: "mapeju-cardapio.appspot.com",
-  messagingSenderId: "1055368224770",
-  appId: "1:1055368224770:web:f3a5771fc333f192a3071b",
-  measurementId: "G-00FD2KZEGE"
-};
+const firebaseConfig = config.firebase;
 
 // Inicializar o Firebase
 firebase.initializeApp(firebaseConfig);
