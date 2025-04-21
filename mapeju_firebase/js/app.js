@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cartTotalValue = document.getElementById('cart-total-value');
     const clearCartBtn = document.getElementById('clear-cart-btn');
     const orderBtn = document.getElementById('order-btn');
-    const emptyCartMessage = document.querySelector('.empty-cart');
+    const emptyCartMessage = null;
     const emptyProductsMessage = document.querySelector('.empty-message');
     const floatingCartBtn = document.getElementById('floating-cart-btn');
     const cartBadge = document.getElementById('cart-badge');
@@ -80,113 +80,290 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Gerenciador de carrinho
     const cartManager = {
-        addToCart(productId) {
-            const existingItem = appData.cart.find(item => item.productId === productId);
+        init: function() {
+            console.log('Inicializando o gerenciador de carrinho');
+            if (localStorage.getItem('cart') === null) {
+                localStorage.setItem('cart', '[]');
+            }
             
-            if (existingItem) {
-                existingItem.quantity += 1;
+            // Definir explicitamente o appData.cart com o conteúdo do localStorage
+            try {
+                appData.cart = JSON.parse(localStorage.getItem('cart')) || [];
+                console.log('Cart inicializado com', appData.cart.length, 'itens do localStorage');
+            } catch (e) {
+                console.error('Erro ao carregar carrinho do localStorage:', e);
+                appData.cart = [];
+                localStorage.setItem('cart', '[]');
+            }
+        },
+        
+        // Método de compatibilidade para manter as chamadas antigas funcionando
+        loadCart: function() {
+            console.log('loadCart chamado, usando init()');
+            this.init();
+            return appData.cart;
+        },
+        
+        getCart: function() {
+            try {
+                return JSON.parse(localStorage.getItem('cart')) || [];
+            } catch (e) {
+                console.error('Erro ao ler carrinho do localStorage:', e);
+                return [];
+            }
+        },
+        
+        // Salvar o carrinho
+        saveCart: function() {
+            localStorage.setItem('cart', JSON.stringify(appData.cart));
+        },
+        
+        // Adicionar ao carrinho
+        addToCart: function(product) {
+            console.log('Adicionando ao carrinho:', product);
+            const existingItemIndex = appData.cart.findIndex(item => 
+                item.productId === product.id && 
+                (!item.selectedFlavors || item.selectedFlavors.length === 0)
+            );
+            
+            if (existingItemIndex !== -1) {
+                appData.cart[existingItemIndex].quantity += 1;
             } else {
                 appData.cart.push({
-                    productId,
+                    productId: product.id,
+                    title: product.title,
+                    price: product.price,
                     quantity: 1
                 });
             }
             
-            // Salvar carrinho no localStorage
             this.saveCart();
-            
-            return appData.cart;
+            renderCart();
+            updateCartBadge();
         },
         
-        decreaseQuantity(productId) {
-            const existingItem = appData.cart.find(item => item.productId === productId);
+        // Adicionar ao carrinho com sabores
+        addToCartWithFlavor: function(product, selectedFlavors) {
+            console.log('Adicionando ao carrinho com sabores:', product, selectedFlavors);
             
-            if (existingItem) {
-                if (existingItem.quantity > 1) {
-                    existingItem.quantity -= 1;
-                } else {
-                    // Remover item se a quantidade for 1
-                    this.removeFromCart(productId);
-                    return appData.cart;
-                }
-                
-                // Salvar carrinho no localStorage
+            // Garantir que selectedFlavors seja sempre um array
+            if (!Array.isArray(selectedFlavors)) {
+                selectedFlavors = selectedFlavors ? [selectedFlavors] : [];
+            }
+            
+            // Log de debug dos sabores
+            console.log('Sabores selecionados:', selectedFlavors.map(f => f.name));
+            
+            // Procurar se já existe um item com os mesmos sabores
+            const existingItemIndex = appData.cart.findIndex(item => 
+                item.productId === product.id && 
+                this.areFlavorsEqual(item.selectedFlavors || [], selectedFlavors)
+            );
+            
+            if (existingItemIndex !== -1) {
+                appData.cart[existingItemIndex].quantity += 1;
+            } else {
+                // Criar novo item com os sabores selecionados
+                appData.cart.push({
+                    productId: product.id,
+                    title: product.title,
+                    price: parseFloat(product.price || 0),
+                    quantity: 1,
+                    selectedFlavors: JSON.parse(JSON.stringify(selectedFlavors)) // Cópia profunda para evitar referências
+                });
+            }
+            
+            this.saveCart();
+            renderCart();
+            updateCartBadge();
+        },
+        
+        // Verificar se os arrays de sabores são iguais
+        areFlavorsEqual: function(flavors1, flavors2) {
+            if (!flavors1 || !flavors2) return false;
+            if (flavors1.length !== flavors2.length) return false;
+            
+            // Comparar cada sabor pelo nome (propriedade mais confiável)
+            const names1 = flavors1.map(f => f && f.name ? f.name : '').sort();
+            const names2 = flavors2.map(f => f && f.name ? f.name : '').sort();
+            
+            for (let i = 0; i < names1.length; i++) {
+                if (names1[i] !== names2[i]) return false;
+            }
+            
+            return true;
+        },
+        
+        // Remover do carrinho
+        removeFromCart: function(productId, selectedFlavors = []) {
+            console.log('Removendo do carrinho:', productId, selectedFlavors);
+            
+            const itemIndex = appData.cart.findIndex(item => 
+                item.productId === productId && 
+                this.areFlavorsEqual(item.selectedFlavors || [], selectedFlavors)
+            );
+            
+            if (itemIndex !== -1) {
+                appData.cart.splice(itemIndex, 1);
                 this.saveCart();
             }
-            
-            return appData.cart;
         },
         
-        removeFromCart(productId) {
-            appData.cart = appData.cart.filter(item => item.productId !== productId);
+        // Aumentar quantidade
+        increaseQuantity: function(productId, selectedFlavors = []) {
+            console.log('Aumentando quantidade:', productId, selectedFlavors);
             
-            // Salvar carrinho no localStorage
-            this.saveCart();
+            const itemIndex = appData.cart.findIndex(item => 
+                item.productId === productId && 
+                this.areFlavorsEqual(item.selectedFlavors || [], selectedFlavors)
+            );
             
-            return appData.cart;
-        },
-        
-        clearCart() {
-            appData.cart = [];
-            
-            // Salvar carrinho no localStorage
-            this.saveCart();
-            
-            return appData.cart;
-        },
-        
-        loadCart() {
-            const savedCart = localStorage.getItem('mapeju_cart');
-            
-            if (savedCart) {
-                try {
-                    appData.cart = JSON.parse(savedCart);
-                } catch (error) {
-                    console.error('Erro ao carregar carrinho:', error);
-                    appData.cart = [];
-                }
+            if (itemIndex !== -1) {
+                appData.cart[itemIndex].quantity += 1;
+                this.saveCart();
             }
-            
-            return appData.cart;
         },
         
-        saveCart() {
-            localStorage.setItem('mapeju_cart', JSON.stringify(appData.cart));
-        },
-        
-        async getCartTotal() {
-            // Obter todos os produtos para calcular o total
-            const allProducts = await productManager.getProducts();
+        // Diminuir quantidade
+        decreaseQuantity: function(productId, selectedFlavors = []) {
+            console.log('Diminuindo quantidade:', productId, selectedFlavors);
             
-            // Calcular total do carrinho
-            return appData.cart.reduce((total, item) => {
-                const product = allProducts.find(prod => prod.id === item.productId);
-                if (product) {
-                    return total + (product.price * item.quantity);
+            const itemIndex = appData.cart.findIndex(item => 
+                item.productId === productId && 
+                this.areFlavorsEqual(item.selectedFlavors || [], selectedFlavors)
+            );
+            
+            if (itemIndex !== -1) {
+                if (appData.cart[itemIndex].quantity > 1) {
+                    appData.cart[itemIndex].quantity -= 1;
+                } else {
+                    appData.cart.splice(itemIndex, 1);
                 }
-                return total;
-            }, 0);
+                this.saveCart();
+            }
+        },
+        
+        // Limpar carrinho
+        clearCart: function() {
+            appData.cart = [];
+            this.saveCart();
         }
     };
+
+    // Função auxiliar para adicionar ao carrinho com opção de sabor
+    async function addToCartWithFlavor(productId, flavor) {
+        console.log('Adicionando ao carrinho com flavor:', productId, flavor);
+        
+        try {
+            // Obter informações completas do produto
+            const productInfo = await getProductDetails(productId);
+            console.log('Informações do produto obtidas:', productInfo);
+            
+            // Se não tiver flavor, adicionar sem sabor
+            if (!flavor) {
+                cartManager.addToCart(productInfo);
+                showNotification('Produto adicionado ao carrinho!', 'success');
+                return;
+            }
+            
+            // Tratar diferentes formatos de flavor
+            let selectedFlavors = [];
+            
+            if (Array.isArray(flavor)) {
+                // Caso de múltiplos sabores - filtrar sabores inválidos
+                selectedFlavors = flavor
+                    .filter(f => f && typeof f === 'object' && f.name) // Garantir que cada sabor seja um objeto válido com nome
+                    .map(f => {
+                        // Garantir que o preço extra seja um número
+                        if (f.extraPrice) {
+                            f.extraPrice = parseFloat(f.extraPrice) || 0;
+                        } else {
+                            f.extraPrice = 0;
+                        }
+                        return f;
+                    });
+            } else if (typeof flavor === 'object' && flavor !== null && flavor.name) {
+                // Caso de um único sabor - garantir que o preço extra seja um número
+                const f = {...flavor}; // Criar uma cópia para não modificar o original
+                if (f.extraPrice) {
+                    f.extraPrice = parseFloat(f.extraPrice) || 0;
+                } else {
+                    f.extraPrice = 0;
+                }
+                selectedFlavors = [f];
+            }
+            
+            // Log para depuração
+            const flavorNames = selectedFlavors.map(f => f.name).join(', ');
+            console.log(`Sabores formatados para adicionar ao carrinho: ${flavorNames || 'nenhum'}`);
+            
+            // Verificar se existem sabores válidos após o processamento
+            if (selectedFlavors.length === 0) {
+                console.warn('Nenhum sabor válido após processamento, adicionando produto sem sabor');
+                cartManager.addToCart(productInfo);
+            } else {
+                // Chamar a função do cartManager com os sabores processados
+                cartManager.addToCartWithFlavor(productInfo, selectedFlavors);
+            }
+        } catch (error) {
+            console.error('Erro ao processar produto ou sabores:', error);
+            showNotification('Erro ao adicionar produto ao carrinho', 'error');
+        }
+        
+        showNotification('Produto adicionado ao carrinho!', 'success');
+    }
 
     // Inicializar a aplicação
     initApp();
 
+    // Função para garantir que o carrinho seja exibido corretamente
+    function fixCartDisplay() {
+        // Verificar se há itens no carrinho
+        if (Array.isArray(appData.cart) && appData.cart.length > 0) {
+            // Remover qualquer mensagem de carrinho vazio
+            const emptyMessages = document.querySelectorAll('.empty-cart-message');
+            if (emptyMessages.length > 0) {
+                console.log('Corrigindo exibição do carrinho: removendo mensagens de vazio');
+                emptyMessages.forEach(msg => msg.remove());
+            }
+            
+            // Verificar se há itens visíveis no carrinho
+            const cartItems = document.querySelectorAll('.cart-item');
+            if (cartItems.length === 0) {
+                console.log('Itens do carrinho não estão visíveis. Forçando renderização.');
+                renderCart();
+            }
+        }
+    }
+
+    // Executar a correção após a inicialização e periodicamente
+    setTimeout(fixCartDisplay, 500);
+    setInterval(fixCartDisplay, 2000);
+
     async function initApp() {
-        // Carregar carrinho do localStorage
-        cartManager.loadCart();
-        
-        // Configurar eventos
-        setupEventListeners();
-        
-        // Renderizar carrinho
-        renderCart();
-        
-        // Atualizar badge do carrinho
-        updateCartBadge();
-        
-        // Iniciar sincronização em tempo real
-        startRealtimeSync();
+        // Inicializar o carrinho do localStorage
+        try {
+            console.log('Inicializando aplicação...');
+            cartManager.loadCart();
+            
+            // Verificar se o carrinho foi carregado corretamente
+            console.log('Carrinho inicializado com', appData.cart.length, 'itens');
+            
+            // Configurar eventos
+            setupEventListeners();
+            
+            // Renderizar carrinho
+            renderCart();
+            
+            // Atualizar badge do carrinho
+            updateCartBadge();
+            
+            // Iniciar sincronização em tempo real
+            startRealtimeSync();
+        } catch (error) {
+            console.error('Erro ao inicializar aplicação:', error);
+            showStartupError('Houve um erro ao inicializar a aplicação. Por favor, recarregue a página.');
+        }
     }
 
     function setupEventListeners() {
@@ -197,6 +374,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 const adminLoginModal = document.getElementById('admin-login-modal');
                 if (adminLoginModal) {
                     adminLoginModal.style.display = 'block';
+                }
+            });
+        }
+
+        // Botão de compartilhar cardápio
+        const shareBtn = document.getElementById('share-btn');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', function() {
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'Cardápio Mapeju Doces',
+                        text: 'Confira o cardápio digital da Mapeju Doces!',
+                        url: window.location.href
+                    })
+                    .then(() => console.log('Cardápio compartilhado com sucesso!'))
+                    .catch((error) => console.error('Erro ao compartilhar:', error));
+                } else {
+                    // Fallback para navegadores que não suportam a Web Share API
+                    prompt('Copie o link abaixo para compartilhar o cardápio:', window.location.href);
                 }
             });
         }
@@ -232,23 +428,27 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Botão para limpar carrinho
-        clearCartBtn.addEventListener('click', function() {
-            if (confirm('Tem certeza que deseja limpar o carrinho?')) {
-                cartManager.clearCart();
-                renderCart();
-                updateCartBadge();
-            }
-        });
+        if (clearCartBtn) {
+            clearCartBtn.addEventListener('click', function() {
+                if (confirm('Tem certeza que deseja limpar o carrinho?')) {
+                    cartManager.clearCart();
+                    renderCart();
+                    updateCartBadge();
+                }
+            });
+        }
         
         // Botão para fazer pedido via WhatsApp
-        orderBtn.addEventListener('click', async function() {
-            if (appData.cart.length === 0) {
-                alert('Seu carrinho está vazio. Adicione produtos antes de fazer o pedido.');
-                return;
-            }
-            
-            await sendOrder();
-        });
+        if (orderBtn) {
+            orderBtn.addEventListener('click', async function() {
+                if (appData.cart.length === 0) {
+                    alert('Seu carrinho está vazio. Adicione produtos antes de fazer o pedido.');
+                    return;
+                }
+                
+                await sendWhatsAppOrder();
+            });
+        }
         
         // Botão flutuante do carrinho (mobile)
         if (floatingCartBtn) {
@@ -339,6 +539,11 @@ document.addEventListener('DOMContentLoaded', function() {
             emptyMessage.className = 'empty-message';
             emptyMessage.textContent = 'Nenhuma categoria disponível';
             categoriesContainer.appendChild(emptyMessage);
+            
+            // Ocultar o spinner de carregamento
+            if (categoriesLoading) {
+                categoriesLoading.style.display = 'none';
+            }
             return;
         }
         
@@ -369,6 +574,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             categoriesContainer.appendChild(button);
         });
+        
+        // Ocultar o spinner de carregamento após renderizar as categorias
+        if (categoriesLoading) {
+            categoriesLoading.style.display = 'none';
+        }
     }
 
     // Selecionar categoria e mostrar seus produtos
@@ -397,7 +607,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .where('categoryId', '==', categoryId)
             .onSnapshot(snapshot => {
                 // Limpar container
-        productsContainer.innerHTML = '';
+                productsContainer.innerHTML = '';
         
                 if (snapshot.empty) {
                     // Mostrar mensagem quando não há produtos
@@ -411,14 +621,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
 
-                // Filtrar produtos ativos e ordenar por nome
+                // Filtrar produtos disponíveis e ordenar por nome
                 const products = snapshot.docs
                     .map(doc => ({
                         id: doc.id,
                         ...doc.data()
                     }))
-                    .filter(product => product.active !== false)
+                    .filter(product => product.available !== false) // Mostrar apenas produtos disponíveis
                     .sort((a, b) => a.name.localeCompare(b.name));
+
+                if (products.length === 0) {
+                    // Mostrar mensagem quando não há produtos disponíveis
+                    const emptyMessage = document.createElement('div');
+                    emptyMessage.className = 'empty-products-message';
+                    emptyMessage.innerHTML = `
+                        <i class="fas fa-box-open"></i>
+                            <p>Não há produtos disponíveis nesta categoria no momento</p>
+                    `;
+                    productsContainer.appendChild(emptyMessage);
+                    return;
+                }
 
                 // Renderizar produtos
                 products.forEach(product => {
@@ -469,26 +691,170 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     imageContainer.appendChild(imageElement);
 
+                    // Verificar se o produto tem opções de sabor
+                    const hasFlavors = product.hasFlavors === true && Array.isArray(product.flavors) && product.flavors.length > 0;
+                    
+                    // Gerar HTML para adicionar ao carrinho com ou sem seleção de sabor
+                    let addToCartHtml = '';
+                    
+                    if (hasFlavors) {
+                        // Verificar se o produto permite múltiplos sabores
+                        const allowMultipleFlavors = product.allowMultipleFlavors === true;
+                        const flavorQuantity = product.flavorQuantity || 1;
+                        
+                        let flavorSelectionHtml = '';
+                        
+                        if (allowMultipleFlavors) {
+                            // Criar seleção múltipla com checkboxes (inicialmente escondida)
+                            flavorSelectionHtml = `
+                                <div class="product-flavors multiple">
+                                    <button type="button" class="flavor-toggle-btn">Selecionar sabores</button>
+                                    <div class="flavor-selection-container" style="display: none;">
+                                        <label>Escolha ${flavorQuantity} sabores:</label>
+                                        <div class="flavor-checkbox-container">`;
+                                    
+                            product.flavors.forEach((flavor, index) => {
+                                const extraPriceText = flavor.extraPrice > 0 ? ` (+R$ ${flavor.extraPrice.toFixed(2)})` : '';
+                                flavorSelectionHtml += `
+                                    <div class="flavor-checkbox">
+                                        <input type="checkbox" id="flavor-${product.id}-${index}" 
+                                               class="flavor-select-checkbox" data-index="${index}" 
+                                               data-max-selection="${flavorQuantity}">
+                                        <label for="flavor-${product.id}-${index}">${flavor.name}${extraPriceText}</label>
+                                    </div>`;
+                            });
+                            
+                            flavorSelectionHtml += `
+                                        </div>
+                                        <p class="flavor-selection-count">Selecione ${flavorQuantity} sabores</p>
+                                    </div>
+                                </div>`;
+                        } else {
+                            // Dropdown para seleção única (inicialmente escondido)
+                            let flavorOptionsHtml = '';
+                            product.flavors.forEach((flavor, index) => {
+                                const extraPriceText = flavor.extraPrice > 0 ? ` (+R$ ${flavor.extraPrice.toFixed(2)})` : '';
+                                flavorOptionsHtml += `<option value="${index}">${flavor.name}${extraPriceText}</option>`;
+                            });
+                            
+                            flavorSelectionHtml = `
+                                <div class="product-flavors">
+                                    <button type="button" class="flavor-toggle-btn">Selecionar sabor</button>
+                                    <div class="flavor-selection-container" style="display: none;">
+                                        <label for="flavor-select-${product.id}">Escolha o sabor:</label>
+                                        <select id="flavor-select-${product.id}" class="flavor-select">
+                                            ${flavorOptionsHtml}
+                                        </select>
+                                    </div>
+                                </div>`;
+                        }
+                        
+                        addToCartHtml = `
+                            ${flavorSelectionHtml}
+                            <button class="add-to-cart-btn" data-product-id="${product.id}">
+                                <i class="fas fa-plus"></i> Adicionar
+                            </button>
+                        `;
+                    } else {
+                        // Produto sem opções de sabor
+                        addToCartHtml = `
+                            <button class="add-to-cart-btn" data-product-id="${product.id}">
+                                <i class="fas fa-plus"></i> Adicionar
+                            </button>
+                        `;
+                    }
+
                     productElement.innerHTML = `
                         <div class="product-info">
                             <h3 class="product-name">${product.name}</h3>
                             <p class="product-description">${product.description || ''}</p>
                             <p class="product-price">R$ ${product.price.toFixed(2)}</p>
-                            <button class="add-to-cart-btn" data-product-id="${product.id}">
-                                <i class="fas fa-plus"></i> Adicionar
-                            </button>
+                            ${addToCartHtml}
                         </div>
                     `;
 
                     // Inserir container de imagem no início do card
                     productElement.insertBefore(imageContainer, productElement.firstChild);
 
-                    // Adicionar evento ao botão
+                    // Adicionar eventos aos botões e checkboxes
                     const addButton = productElement.querySelector('.add-to-cart-btn');
+                    
+                    // Adicionar evento para o botão de selecionar sabores
+                    const flavorToggleBtn = productElement.querySelector('.flavor-toggle-btn');
+                    if (flavorToggleBtn) {
+                        flavorToggleBtn.addEventListener('click', function() {
+                            const selectionContainer = this.nextElementSibling;
+                            if (selectionContainer.style.display === 'none') {
+                                selectionContainer.style.display = 'block';
+                                this.textContent = 'Esconder sabores';
+                            } else {
+                                selectionContainer.style.display = 'none';
+                                this.textContent = this.textContent.includes('sabores') ? 'Selecionar sabores' : 'Selecionar sabor';
+                            }
+                        });
+                    }
+                    
+                    // Se houver checkboxes de sabor, adicionar comportamento de limite de seleção
+                    if (product.allowMultipleFlavors) {
+                        const checkboxes = productElement.querySelectorAll('.flavor-select-checkbox');
+                        const selectionCountText = productElement.querySelector('.flavor-selection-count');
+                        const maxSelection = product.flavorQuantity || 1;
+                        
+                        checkboxes.forEach(checkbox => {
+                            checkbox.addEventListener('change', function() {
+                                const checked = productElement.querySelectorAll('.flavor-select-checkbox:checked');
+                                if (checked.length > maxSelection) {
+                                    this.checked = false;
+                                    alert(`Você só pode selecionar ${maxSelection} sabores para este produto.`);
+                                }
+                                
+                                // Atualizar o texto de contagem
+                                if (selectionCountText) {
+                                    const remaining = maxSelection - checked.length;
+                                    if (remaining === 0) {
+                                        selectionCountText.textContent = 'Seleção completa!';
+                                        selectionCountText.style.color = '#28a745'; // Verde
+                                    } else {
+                                        selectionCountText.textContent = `Selecione mais ${remaining} ${remaining === 1 ? 'sabor' : 'sabores'}`;
+                                        selectionCountText.style.color = ''; // Cor padrão
+                                    }
+                                }
+                            });
+                        });
+                    }
+                    
                     addButton.addEventListener('click', function() {
-                        cartManager.addToCart(product.id);
-                        renderCart();
-                        updateCartBadge();
+                        let selectedFlavor = null;
+                        
+                        // Se o produto tem sabores, obter o sabor selecionado
+                        if (hasFlavors) {
+                            if (product.allowMultipleFlavors === true) {
+                                // Obter sabores selecionados nos checkboxes
+                                const checkboxes = productElement.querySelectorAll('.flavor-select-checkbox:checked');
+                                if (checkboxes.length > 0) {
+                                    const selectedFlavors = [];
+                                    checkboxes.forEach(checkbox => {
+                                        const flavorIndex = parseInt(checkbox.getAttribute('data-index'));
+                                        selectedFlavors.push(product.flavors[flavorIndex]);
+                                    });
+                                    selectedFlavor = selectedFlavors;
+                                } else {
+                                    alert('Por favor, selecione os sabores desejados.');
+                                    return;
+                                }
+                            } else {
+                                // Para seleção única (dropdown)
+                                const flavorSelect = productElement.querySelector('.flavor-select');
+                                if (flavorSelect) {
+                                    const flavorIndex = parseInt(flavorSelect.value);
+                                    selectedFlavor = product.flavors[flavorIndex];
+                                }
+                            }
+                        }
+                        
+                        // Adicionar ao carrinho com informações de sabor
+                        addToCartWithFlavor(product.id, selectedFlavor);
+                        
                         showNotification('Produto adicionado ao carrinho!', 'success');
                     });
 
@@ -505,89 +871,203 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    // Renderizar carrinho
-    async function renderCart() {
-        if (!cartItemsContainer) return;
+    // Renderiza o carrinho
+    function renderCart() {
+        console.log('Renderizando carrinho:', cartManager.getCart());
+        const cart = cartManager.getCart();
+        const cartContainer = document.getElementById('cart-items');
         
-        cartItemsContainer.innerHTML = '';
-        let total = 0;
-        
-        if (appData.cart.length === 0) {
-            cartItemsContainer.innerHTML = '<p class="empty-cart">Seu carrinho está vazio</p>';
-            if (cartTotalValue) {
-                cartTotalValue.textContent = 'R$ 0,00';
-            }
+        if (!cartContainer) {
+            console.warn('Elemento cart-items não encontrado no DOM');
             return;
         }
         
-        // Obter todos os produtos para poder exibir informações no carrinho
-        const allProducts = await productManager.getProducts();
+        // Limpar o conteúdo atual
+        cartContainer.innerHTML = '';
         
-        appData.cart.forEach(item => {
-            const product = allProducts.find(prod => prod.id === item.productId);
-            if (product) {
-                const itemTotal = product.price * item.quantity;
-                total += itemTotal;
-                
+        // Ocultar a mensagem de carrinho vazio se existir
+        const emptyCartMessage = document.getElementById('empty-cart-message');
+        if (emptyCartMessage) {
+            emptyCartMessage.style.display = cart.length === 0 ? 'block' : 'none';
+        }
+        
+        // Container para itens do carrinho
+        const cartItemsContainer = document.createElement('div');
+        cartItemsContainer.className = 'cart-items-list';
+        
+        // Verificar se o carrinho está vazio
+        if (cart.length === 0) {
+            // Não precisamos fazer nada aqui, a mensagem empty-cart-message já deve estar visível
+            // Garantir que o total seja zerado
+            updateCartTotal(0);
+        } else {
+            let total = 0;
+            
+            // Criar elementos para cada item do carrinho
+            cart.forEach((item, index) => {
                 const cartItem = document.createElement('div');
                 cartItem.className = 'cart-item';
-                cartItem.innerHTML = `
-                    <div class="cart-item-info">
-                        <h4>${product.name}</h4>
-                        <p>R$ ${product.price.toFixed(2)} x ${item.quantity}</p>
-                    </div>
-                    <div class="cart-item-total">
-                        R$ ${itemTotal.toFixed(2)}
-                    </div>
-                    <div class="cart-item-actions">
-                        <button class="quantity-btn minus" data-id="${item.productId}">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                        <span class="quantity">${item.quantity}</span>
-                        <button class="quantity-btn plus" data-id="${item.productId}">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                        <button class="remove-btn" data-id="${item.productId}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
                 
-                // Adicionar eventos aos botões
-                const minusBtn = cartItem.querySelector('.minus');
-                const plusBtn = cartItem.querySelector('.plus');
-                const removeBtn = cartItem.querySelector('.remove-btn');
+                // Título do produto
+                const itemTitle = document.createElement('h4');
+                itemTitle.className = 'cart-item-title';
+                itemTitle.textContent = item.title || 'Produto';
+                cartItem.appendChild(itemTitle);
                 
-                minusBtn.addEventListener('click', function() {
-                    const productId = this.getAttribute('data-id');
-                    cartManager.decreaseQuantity(productId);
-                    renderCart();
-                    updateCartBadge();
-                });
+                // Container para informações do produto
+                const itemInfo = document.createElement('div');
+                itemInfo.className = 'cart-item-details';
+                cartItem.appendChild(itemInfo);
                 
-                plusBtn.addEventListener('click', function() {
-                    const productId = this.getAttribute('data-id');
-                    cartManager.addToCart(productId);
-                    renderCart();
-                    updateCartBadge();
-                });
+                // Preço unitário
+                const unitPriceText = document.createElement('p');
+                unitPriceText.className = 'cart-item-unit-price';
+                try {
+                    const unitPrice = parseFloat(item.price) || 0;
+                    unitPriceText.textContent = `Valor unitário: R$ ${unitPrice.toFixed(2)}`;
+                    itemInfo.appendChild(unitPriceText);
+                } catch (e) {
+                    console.error('Erro ao exibir preço unitário:', e);
+                }
                 
-                removeBtn.addEventListener('click', function() {
-                    const productId = this.getAttribute('data-id');
-                    if (confirm('Tem certeza que deseja remover este item?')) {
-                        cartManager.removeFromCart(productId);
+                // Quantidade
+                const quantityText = document.createElement('p');
+                quantityText.className = 'cart-item-quantity-text';
+                quantityText.textContent = `Quantidade: ${item.quantity}`;
+                itemInfo.appendChild(quantityText);
+                
+                // Exibir sabores selecionados, se houver
+                if (item.selectedFlavors && item.selectedFlavors.length > 0) {
+                    const flavorsText = document.createElement('p');
+                    flavorsText.className = 'cart-item-flavors';
+                    
+                    // Verificar se cada sabor tem a propriedade name
+                    const flavorNames = item.selectedFlavors
+                        .filter(f => f && f.name)
+                        .map(f => f.name)
+                        .join(', ');
+                    
+                    if (flavorNames) {
+                        flavorsText.textContent = `Sabores: ${flavorNames}`;
+                        itemInfo.appendChild(flavorsText);
+                    }
+                }
+                
+                // Preço do item
+                const itemPrice = document.createElement('p');
+                itemPrice.className = 'cart-item-price';
+                
+                // Calcular preço total (base + extras dos sabores)
+                let basePrice = 0;
+                try {
+                    basePrice = parseFloat(item.price) || 0;
+                } catch (e) {
+                    console.error('Erro ao converter preço do item:', e);
+                    basePrice = 0;
+                }
+                
+                let itemTotalPrice = basePrice * item.quantity;
+                console.log(`Item ${item.title}: Preço base = ${basePrice}, Quantidade = ${item.quantity}`);
+                
+                // Adicionar preços extras dos sabores
+                if (item.selectedFlavors && item.selectedFlavors.length > 0) {
+                    item.selectedFlavors.forEach(flavor => {
+                        if (flavor && flavor.extraPrice) {
+                            try {
+                                // Garantir que extraPrice seja um número
+                                const extraPrice = parseFloat(flavor.extraPrice) || 0;
+                                itemTotalPrice += extraPrice * item.quantity;
+                                console.log(`  Sabor ${flavor.name}: Preço extra = ${extraPrice}`);
+                            } catch (e) {
+                                console.error('Erro ao converter preço extra do sabor:', e);
+                            }
+                        }
+                    });
+                }
+                
+                itemPrice.textContent = `Total: R$ ${itemTotalPrice.toFixed(2)}`;
+                itemInfo.appendChild(itemPrice);
+                
+                // Controles de quantidade
+                const quantityControls = document.createElement('div');
+                quantityControls.className = 'quantity-controls';
+                
+                const decreaseBtn = document.createElement('button');
+                decreaseBtn.textContent = '-';
+                decreaseBtn.addEventListener('click', () => {
+                    if (item.quantity > 1) {
+                        item.quantity--;
+                        cartManager.decreaseQuantity(item.productId, item.selectedFlavors || []);
                         renderCart();
                         updateCartBadge();
                     }
                 });
                 
+                const quantityDisplay = document.createElement('span');
+                quantityDisplay.className = 'cart-item-quantity';
+                quantityDisplay.textContent = item.quantity;
+                
+                const increaseBtn = document.createElement('button');
+                increaseBtn.textContent = '+';
+                increaseBtn.addEventListener('click', () => {
+                    item.quantity++;
+                    cartManager.increaseQuantity(item.productId, item.selectedFlavors || []);
+                    renderCart();
+                    updateCartBadge();
+                });
+                
+                quantityControls.appendChild(decreaseBtn);
+                quantityControls.appendChild(quantityDisplay);
+                quantityControls.appendChild(increaseBtn);
+                cartItem.appendChild(quantityControls);
+                
+                // Botão remover
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-item';
+                removeBtn.textContent = 'Remover';
+                removeBtn.addEventListener('click', () => {
+                    if (confirm('Tem certeza que deseja remover este item?')) {
+                        cartManager.removeFromCart(item.productId, item.selectedFlavors || []);
+                        renderCart();
+                        updateCartBadge();
+                    }
+                });
+                cartItem.appendChild(removeBtn);
+                
                 cartItemsContainer.appendChild(cartItem);
-            }
-        });
+                
+                // Adicionar ao total
+                total += itemTotalPrice;
+                console.log(`Total parcial após item ${index + 1}: R$ ${total.toFixed(2)}`);
+            });
+            
+            cartContainer.appendChild(cartItemsContainer);
+            
+            // Atualizar o total
+            updateCartTotal(total);
+        }
+    }
+
+    // Função para atualizar o total do carrinho
+    function updateCartTotal(total) {
+        const cartTotalElement = document.getElementById('cartTotal');
+        if (!cartTotalElement) {
+            console.warn('Elemento cartTotal não encontrado no DOM');
+            return;
+        }
         
-        // Atualizar total
-        if (cartTotalValue) {
-            cartTotalValue.textContent = `R$ ${total.toFixed(2)}`;
+        // Garantir que o total seja um número válido
+        if (isNaN(total) || total === null || total === undefined) {
+            console.warn('Total inválido:', total);
+            total = 0;
+        }
+        
+        // Formatar o total com duas casas decimais
+        try {
+            cartTotalElement.textContent = `R$ ${parseFloat(total).toFixed(2)}`;
+        } catch (e) {
+            console.error('Erro ao formatar o total:', e);
+            cartTotalElement.textContent = 'R$ 0,00';
         }
     }
 
@@ -605,16 +1085,97 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Função para enviar pedido
-    async function sendOrder() {
-        const cartItems = await getCartItems();
-        if (cartItems.length === 0) {
-            showNotification('Adicione itens ao carrinho antes de enviar o pedido', 'error');
-            return;
+    // Prepara e envia o pedido para o WhatsApp
+    async function sendWhatsAppOrder() {
+        try {
+            if (!navigator.onLine) {
+                showNotification('Você está offline. Conecte-se à internet para finalizar o pedido.', 'error');
+                return;
+            }
+
+            const cart = await getCartItems();
+            if (cart.length === 0) {
+                showNotification('Adicione produtos ao carrinho primeiro!', 'error');
+                return;
+            }
+
+            // Pega informações do cliente
+            const name = document.getElementById('clientName').value.trim();
+            const address = document.getElementById('clientAddress').value.trim();
+
+            if (!name || !address) {
+                showNotification('Preencha seu nome e endereço para continuar', 'error');
+                return;
+            }
+
+            let totalPrice = 0;
+            // Constrói a mensagem para WhatsApp
+            let message = `*Novo Pedido*\n\n*Cliente:* ${name}\n*Endereço:* ${address}\n\n*Produtos:*\n`;
+
+            cart.forEach(item => {
+                let itemPrice = parseFloat(item.price || 0);
+                
+                // Adicionar texto dos sabores e preços extras
+                let flavorText = '';
+                if (item.selectedFlavors && item.selectedFlavors.length > 0) {
+                    const flavorNames = item.selectedFlavors.map(f => f.name).join(', ');
+                    flavorText = `\n   - Sabores: ${flavorNames}`;
+                    
+                    // Calcular preço extra dos sabores
+                    item.selectedFlavors.forEach(flavor => {
+                        if (flavor.extraPrice) {
+                            const extraPrice = parseFloat(flavor.extraPrice) || 0;
+                            itemPrice += extraPrice;
+                        }
+                    });
+                } else if (item.flavor && item.flavor.name) {
+                    flavorText = `\n   - Sabor: ${item.flavor.name}`;
+                    
+                    // Adicionar preço extra do sabor
+                    if (item.flavor.extraPrice) {
+                        const extraPrice = parseFloat(item.flavor.extraPrice) || 0;
+                        itemPrice += extraPrice;
+                    }
+                }
+                
+                const itemTotal = itemPrice * item.quantity;
+                totalPrice += itemTotal;
+                
+                message += `\n• ${item.quantity}x ${item.title || item.name} - R$ ${itemTotal.toFixed(2)}${flavorText}`;
+            });
+
+            message += `\n\n*Total:* R$ ${totalPrice.toFixed(2)}`;
+
+            // Pega número de WhatsApp da configuração
+            let whatsappNumber = appConfig.whatsappNumber || "5511999999999";
+            if (whatsappNumber.startsWith("+")) {
+                whatsappNumber = whatsappNumber.substring(1);
+            }
+            if (!whatsappNumber.startsWith("55")) {
+                whatsappNumber = "55" + whatsappNumber;
+            }
+
+            // Adiciona forma de pagamento se disponível
+            const paymentMethod = document.getElementById('paymentMethod');
+            if (paymentMethod && paymentMethod.value) {
+                message += `\n\n*Forma de Pagamento:* ${paymentMethod.value}`;
+            }
+
+            // Codifica a mensagem para URL
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+
+            // Limpa o carrinho se confirmado
+            if (confirm('Você será redirecionado para o WhatsApp para finalizar seu pedido. Continuar?')) {
+                cartManager.clearCart();
+                renderCart();
+                updateCartBadge();
+                window.open(whatsappUrl, '_blank');
+            }
+        } catch (error) {
+            console.error('Erro ao enviar pedido:', error);
+            showNotification('Ocorreu um erro ao processar seu pedido', 'error');
         }
-        
-        // Usar a nova função de checkout
-        window.whatsappIntegration.sendToWhatsApp(cartItems);
     }
 
     // Função para obter itens do carrinho com detalhes
@@ -625,7 +1186,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (product) {
                 return {
                     ...product,
-                    quantity: item.quantity
+                    quantity: item.quantity,
+                    selectedFlavors: item.selectedFlavors || [],  // Formato padronizado para sabores
+                    flavor: item.flavor || null,   // Compatibilidade com formato antigo
+                    hasFlavors: product.hasFlavors || false,
+                    allowMultipleFlavors: product.allowMultipleFlavors || false,
+                    flavorQuantity: product.flavorQuantity || 1
                 };
             }
             return null;
@@ -867,5 +1433,53 @@ document.addEventListener('DOMContentLoaded', function() {
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
+    }
+
+    // Função auxiliar para obter um produto pelo ID
+    async function getProductDetails(productId) {
+        try {
+            // Primeiro tenta buscar no DOM (se estiver visível na página atual)
+            const productElement = document.querySelector(`.product-card [data-product-id="${productId}"]`);
+            if (productElement) {
+                const productCard = productElement.closest('.product-card');
+                const productName = productCard.querySelector('.product-name').textContent;
+                const productPriceText = productCard.querySelector('.product-price').textContent.trim();
+                const productPrice = parseFloat(productPriceText.replace('R$', '').replace(',', '.').trim()) || 0;
+                
+                console.log(`Produto encontrado no DOM: ${productName}, Preço: R$ ${productPrice}`);
+                return {
+                    id: productId,
+                    title: productName,
+                    price: productPrice
+                };
+            }
+            
+            // Se não encontrou no DOM, busca no Firebase
+            console.log(`Produto não encontrado no DOM, buscando no Firebase: ${productId}`);
+            const snapshot = await window.appFirebase.productsRef.doc(productId).get();
+            if (snapshot.exists) {
+                const product = snapshot.data();
+                return {
+                    id: productId,
+                    title: product.name,
+                    price: parseFloat(product.price) || 0
+                };
+            }
+            
+            // Se não encontrou, retorna um objeto básico
+            console.warn(`Produto não encontrado: ${productId}`);
+            return {
+                id: productId,
+                title: 'Produto',
+                price: 0
+            };
+        } catch (error) {
+            console.error('Erro ao buscar detalhes do produto:', error);
+            return {
+                id: productId,
+                title: 'Produto',
+                price: 0
+            };
+        }
     }
 });

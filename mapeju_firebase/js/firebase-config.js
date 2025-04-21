@@ -108,7 +108,7 @@ auth.onAuthStateChanged(function(user) {
     // Configurar botão para abrir modal de login
     if (adminLoginBtn) {
       adminLoginBtn.addEventListener('click', function() {
-        const adminModal = document.getElementById('admin-modal');
+        const adminModal = document.getElementById('admin-login-modal');
         if (adminModal) {
           adminModal.style.display = 'block';
         }
@@ -324,5 +324,17 @@ window.appFirebase = {
   generateId,
   showNotification,
   uploadProductImage,
-  loadProductImage
+  loadProductImage,
+  updateProduct: async function(productId, productData) {
+    try {
+        await this.productsRef.doc(productId).update({
+            ...productData,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return true;
+    } catch (error) {
+        console.error("Erro ao atualizar produto:", error);
+        throw error;
+    }
+  }
 };

@@ -195,7 +195,7 @@ header {
     cursor: pointer;
 }
 
-.remove-item-btn {
+.remove-item {
     background: none;
     border: none;
     color: var(--danger-color);
@@ -467,4 +467,164 @@ header {
     color: var(--danger-color);
     text-align: center;
     padding: 20px;
+}
+
+/* Estilos para produtos indisponíveis no admin */
+.admin-product-card.unavailable {
+    opacity: 0.7;
+    border-left: 4px solid #dc3545;
+    background-color: #f8f9fa;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.status-badge.available {
+    background-color: #28a745;
+    color: white;
+}
+
+.status-badge.unavailable {
+    background-color: #dc3545;
+    color: white;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    color: #6c757d;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+    color: #343a40;
+}
+
+.toggle-btn .fa-toggle-on {
+    color: #28a745;
+}
+
+.toggle-btn .fa-toggle-off {
+    color: #dc3545;
+}
+
+/* Estilos para opções de sabor */
+.flavor-options-container {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+    background-color: #f8f9fa;
+}
+
+.flavor-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.flavor-header label {
+    margin-bottom: 0;
+    font-weight: bold;
+}
+
+.flavor-header select {
+    width: auto;
+}
+
+.flavor-option {
+    margin-bottom: 10px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.flavor-option-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.flavor-option .flavor-name {
+    flex-grow: 1;
+}
+
+.flavor-option .flavor-price {
+    width: 120px;
+}
+
+.flavor-option .remove-flavor-btn {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+/* Estilos para escolha de sabor no produto */
+.product-flavors {
+    margin-bottom: 15px;
+}
+
+.product-flavors label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    color: var(--text-color);
+}
+
+.flavor-select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 10px;
+    background-color: white;
+}
+
+.flavor-select:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+/* Estilos para sabores no carrinho */
+.cart-item-flavor {
+    font-size: 0.85em;
+    color: var(--text-color);
+    margin: 2px 0;
+}
+
+.cart-item-flavor-price {
+    font-size: 0.85em;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.flavor-checkbox-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.flavor-checkbox {
+    display: flex;
+    align-items: center;
+}
+
+.flavor-selection-count {
+    font-size: 0.8em;
+    color: #666;
+    margin-top: 5px;
 }

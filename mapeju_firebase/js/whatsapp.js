@@ -41,34 +41,107 @@ function addQuickOrderButtons() {
     });
 }
 
-// Função para formatar o pedido para WhatsApp
-function formatOrder(cartItems, customerInfo) {
-    let message = '🛒 *Novo Pedido*\n\n';
+// Função para formatar o pedido para o WhatsApp
+function formatOrderMessage(items, deliveryInfo, customerInfo) {
+    const parts = [];
     
-    // Adicionar informações do cliente
-    message += '*Dados do Cliente*\n';
-    message += `Nome: ${customerInfo.name}\n`;
-    message += `Endereço: ${customerInfo.address}\n`;
-    message += `Forma de Pagamento: ${formatPaymentMethod(customerInfo.paymentMethod)}`;
+    // Cabeçalho
+    parts.push(`*Novo pedido de ${customerInfo.name}*`);
+    parts.push('');
     
-    if (customerInfo.paymentMethod === 'dinheiro' && customerInfo.changeAmount) {
-        message += `\nTroco para: R$ ${customerInfo.changeAmount}`;
-    }
+    // Itens do pedido
+    parts.push('*Itens do pedido:*');
     
-    message += '\n\n*Itens do Pedido*\n';
+    let subtotal = 0;
     
-    // Adicionar itens do carrinho
-    cartItems.forEach(item => {
-        const itemTotal = item.price * item.quantity;
-        message += `▫️ ${item.quantity}x ${item.name} - R$ ${itemTotal.toFixed(2)}\n`;
+    items.forEach((item, index) => {
+        let itemPrice = parseFloat(item.price);
+        let itemText = `${index + 1}. ${item.name} x${item.quantity}`;
+        
+        // Adicionar informação de sabores, suportando múltiplos sabores
+        if (item.flavors && item.flavors.length > 0) {
+            const flavorNames = item.flavors.map(f => f.name).join(', ');
+            itemText += ` - *Sabores: ${flavorNames}*`;
+            
+            // Adicionar preço extra dos sabores, se houver
+            item.flavors.forEach(flavor => {
+                if (flavor.extraPrice && parseFloat(flavor.extraPrice) > 0) {
+                    itemPrice += parseFloat(flavor.extraPrice);
+                    itemText += ` (+R$ ${parseFloat(flavor.extraPrice).toFixed(2)})`;
+                }
+            });
+        }
+        // Compatibilidade com formato antigo (sabor único)
+        else if (item.flavor) {
+            itemText += ` - *Sabor: ${item.flavor.name}*`;
+            
+            // Adicionar preço extra do sabor, se houver
+            if (item.flavor.extraPrice > 0) {
+                itemPrice += parseFloat(item.flavor.extraPrice);
+                itemText += ` (+R$ ${parseFloat(item.flavor.extraPrice).toFixed(2)})`;
+            }
+        }
+        
+        // Adicionar preço unitário
+        itemText += ` - R$ ${itemPrice.toFixed(2)}/un`;
+        
+        // Calcular e adicionar total do item
+        const itemTotal = itemPrice * item.quantity;
+        itemText += ` = R$ ${itemTotal.toFixed(2)}`;
+        
+        parts.push(itemText);
+        subtotal += itemTotal;
     });
     
-    // Adicionar subtotal, taxa de entrega e total
-    message += `\n*Subtotal: R$ ${customerInfo.subtotal.toFixed(2)}*`;
-    message += `\n*Taxa de Entrega: R$ ${customerInfo.deliveryFee.toFixed(2)}*`;
-    message += `\n*Total: R$ ${customerInfo.total.toFixed(2)}*`;
+    parts.push('');
+    parts.push(`*Subtotal:* R$ ${subtotal.toFixed(2)}`);
     
-    return message;
+    // Informações de entrega
+    if (deliveryInfo && deliveryInfo.mode) {
+        parts.push('');
+        parts.push('*Informações de entrega:*');
+        
+        if (deliveryInfo.mode === 'delivery') {
+            parts.push(`Modo: Entrega`);
+            
+            if (deliveryInfo.address) {
+                parts.push(`Endereço: ${deliveryInfo.address}`);
+            }
+            
+            if (deliveryInfo.fee) {
+                parts.push(`Taxa de entrega: R$ ${parseFloat(deliveryInfo.fee).toFixed(2)}`);
+                
+                // Adicionar o total com entrega
+                const totalWithDelivery = subtotal + parseFloat(deliveryInfo.fee);
+                parts.push(`*Total com entrega:* R$ ${totalWithDelivery.toFixed(2)}`);
+            }
+        } else if (deliveryInfo.mode === 'pickup') {
+            parts.push(`Modo: Retirada na loja`);
+            parts.push(`*Total:* R$ ${subtotal.toFixed(2)}`);
+        }
+    } else {
+        // Se não houver informações de entrega, mostrar apenas o total
+        parts.push('');
+        parts.push(`*Total:* R$ ${subtotal.toFixed(2)}`);
+    }
+    
+    // Informações adicionais do cliente
+    parts.push('');
+    parts.push('*Informações do cliente:*');
+    parts.push(`Nome: ${customerInfo.name}`);
+    
+    if (customerInfo.phone) {
+        parts.push(`Telefone: ${customerInfo.phone}`);
+    }
+    
+    if (customerInfo.notes) {
+        parts.push('');
+        parts.push('*Observações:*');
+        parts.push(customerInfo.notes);
+    }
+    
+    // Juntar todas as partes com quebras de linha
+    return parts.join('\n');
 }
 
 // Função para formatar o método de pagamento
@@ -281,7 +354,37 @@ function sendToWhatsApp(cartItems) {
             // Adicionar itens do carrinho
             cartItems.forEach(item => {
                 const itemTotal = item.price * item.quantity;
-                message += `▫️ ${item.quantity}x ${item.name} - R$ ${itemTotal.toFixed(2)}\n`;
+                let itemMessage = `▫️ ${item.quantity}x ${item.name}`;
+                
+                // Verificar se o item tem múltiplos sabores
+                if (item.flavors && item.flavors.length > 0) {
+                    const flavorNames = item.flavors.map(f => f.name).join(', ');
+                    itemMessage += ` - Sabores: ${flavorNames}`;
+                    
+                    // Adicionar preço extra dos sabores, se houver
+                    let extraPrice = 0;
+                    item.flavors.forEach(flavor => {
+                        if (flavor.extraPrice && parseFloat(flavor.extraPrice) > 0) {
+                            extraPrice += parseFloat(flavor.extraPrice);
+                        }
+                    });
+                    
+                    if (extraPrice > 0) {
+                        itemMessage += ` (+R$ ${extraPrice.toFixed(2)})`;
+                    }
+                }
+                // Compatibilidade com formato antigo
+                else if (item.flavor && item.flavor.name) {
+                    itemMessage += ` - Sabor: ${item.flavor.name}`;
+                    
+                    // Adicionar preço extra do sabor, se houver
+                    if (item.flavor.extraPrice && parseFloat(item.flavor.extraPrice) > 0) {
+                        itemMessage += ` (+R$ ${parseFloat(item.flavor.extraPrice).toFixed(2)})`;
+                    }
+                }
+                
+                itemMessage += ` - R$ ${itemTotal.toFixed(2)}\n`;
+                message += itemMessage;
             });
             
             // Adicionar subtotal, taxa de entrega e total

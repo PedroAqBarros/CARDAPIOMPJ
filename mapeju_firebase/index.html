@@ -734,28 +734,22 @@
         </div>
 
         <div class="cart">
-            <h2>Seu Pedido</h2>
-            <button id="close-cart-btn" class="close-cart-btn">
-                <i class="fas fa-times"></i>
-            </button>
-            <div class="cart-items">
-                <!-- Itens do carrinho serão adicionados dinamicamente via JavaScript -->
+            <div class="cart-header">
+                <h2>Meu Carrinho</h2>
+                <button id="close-cart-btn" class="close-btn"><i class="fas fa-times"></i></button>
             </div>
-            <div class="empty-cart">
-                <i class="fas fa-shopping-cart"></i>
-                <p>Seu carrinho está vazio</p>
+            <div id="empty-cart-message" class="empty-cart-message">
+                Seu carrinho está vazio
             </div>
-            <div class="cart-total">
-                <p>Total: <span id="cart-total-value">R$ 0,00</span></p>
+            <div id="cart-items" class="cart-items">
+                <!-- Itens do carrinho serão carregados dinamicamente -->
             </div>
-            <div class="cart-actions">
-                <button id="clear-cart-btn" class="secondary-btn">
-                    <i class="fas fa-trash"></i> Limpar
-                </button>
-                <button id="order-btn" class="primary-btn">
-                    <i class="fab fa-whatsapp"></i> Fazer Pedido
-                </button>
+            <div id="cartTotalContainer" class="cart-total-container">
+                <span>Total:</span>
+                <span id="cartTotal" class="cart-total">R$ 0,00</span>
             </div>
+            <button id="checkoutButton" class="primary-btn order-btn">Finalizar Pedido</button>
+            <button id="clear-cart-btn" class="secondary-btn">Limpar Carrinho</button>
         </div>
 
         <button id="floating-cart-btn" class="floating-cart-btn">
