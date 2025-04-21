@@ -24,6 +24,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // Referenciar objetos do Firebase
     const { db, auth, categoriesRef, productsRef, cartsRef, generateId, showNotification } = window.appFirebase;
 
+    // Gerenciador de configurações
+    const configManager = {
+        configs: {},
+        
+        init: async function() {
+            try {
+                const configRef = db.collection('configs');
+                const snapshot = await configRef.get();
+                snapshot.forEach(doc => {
+                    this.configs[doc.id] = doc.data().value;
+                });
+                console.log('Configurações carregadas:', this.configs);
+            } catch (error) {
+                console.error('Erro ao carregar configurações:', error);
+            }
+        },
+        
+        getConfig: function(key) {
+            return this.configs[key] || null;
+        },
+        
+        setConfig: function(key, value) {
+            this.configs[key] = value;
+        }
+    };
+
     // Variáveis para controle de estado
     let selectedCategoryId = null;
     let categoriesListener = null;
@@ -33,6 +59,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const appData = {
         cart: []
     };
+
+    // Inicializar a aplicação
+    initApp();
+
+    // Função para garantir que o carrinho seja exibido corretamente
+    function fixCartDisplay() {
+        // Verificar se há itens no carrinho
+        if (Array.isArray(appData.cart) && appData.cart.length > 0) {
+            // Remover qualquer mensagem de carrinho vazio
+            const emptyMessages = document.querySelectorAll('.empty-cart-message');
+            if (emptyMessages.length > 0) {
+                console.log('Corrigindo exibição do carrinho: removendo mensagens de vazio');
+                emptyMessages.forEach(msg => msg.remove());
+            }
+            
+            // Verificar se há itens visíveis no carrinho
+            const cartItems = document.querySelectorAll('.cart-item');
+            if (cartItems.length === 0) {
+                console.log('Itens do carrinho não estão visíveis. Forçando renderização.');
+                renderCart();
+            }
+        }
+    }
+
+    // Executar a correção após a inicialização e periodicamente
+    setTimeout(fixCartDisplay, 500);
+    setInterval(fixCartDisplay, 2000);
 
     // Função para mostrar erro de inicialização
     function showStartupError(message) {
@@ -247,6 +300,14 @@ document.addEventListener('DOMContentLoaded', function() {
         clearCart: function() {
             appData.cart = [];
             this.saveCart();
+        },
+        
+        getCartTotal: function() {
+            let total = 0;
+            this.getCart().forEach(item => {
+                total += item.price * item.quantity;
+            });
+            return total;
         }
     };
 
@@ -314,36 +375,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Inicializar a aplicação
-    initApp();
-
-    // Função para garantir que o carrinho seja exibido corretamente
-    function fixCartDisplay() {
-        // Verificar se há itens no carrinho
-        if (Array.isArray(appData.cart) && appData.cart.length > 0) {
-            // Remover qualquer mensagem de carrinho vazio
-            const emptyMessages = document.querySelectorAll('.empty-cart-message');
-            if (emptyMessages.length > 0) {
-                console.log('Corrigindo exibição do carrinho: removendo mensagens de vazio');
-                emptyMessages.forEach(msg => msg.remove());
-            }
-            
-            // Verificar se há itens visíveis no carrinho
-            const cartItems = document.querySelectorAll('.cart-item');
-            if (cartItems.length === 0) {
-                console.log('Itens do carrinho não estão visíveis. Forçando renderização.');
-                renderCart();
-            }
-        }
-    }
-
-    // Executar a correção após a inicialização e periodicamente
-    setTimeout(fixCartDisplay, 500);
-    setInterval(fixCartDisplay, 2000);
-
     async function initApp() {
-        // Inicializar o carrinho do localStorage
         try {
             console.log('Inicializando aplicação...');
+            
+            // Inicializar configurações
+            await configManager.init();
+            
+            // Inicializar o carrinho do localStorage
             cartManager.loadCart();
             
             // Verificar se o carrinho foi carregado corretamente
@@ -366,114 +405,388 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Configuração dos eventos de botões
     function setupEventListeners() {
-        // Botão de login do admin
-        const adminLoginBtn = document.getElementById('admin-login-btn');
-        if (adminLoginBtn) {
-            adminLoginBtn.addEventListener('click', () => {
-                const adminLoginModal = document.getElementById('admin-login-modal');
-                if (adminLoginModal) {
-                    adminLoginModal.style.display = 'block';
-                }
-            });
-        }
-
-        // Botão de compartilhar cardápio
-        const shareBtn = document.getElementById('share-btn');
-        if (shareBtn) {
-            shareBtn.addEventListener('click', function() {
-                if (navigator.share) {
-                    navigator.share({
-                        title: 'Cardápio Mapeju Doces',
-                        text: 'Confira o cardápio digital da Mapeju Doces!',
-                        url: window.location.href
-                    })
-                    .then(() => console.log('Cardápio compartilhado com sucesso!'))
-                    .catch((error) => console.error('Erro ao compartilhar:', error));
-                } else {
-                    // Fallback para navegadores que não suportam a Web Share API
-                    prompt('Copie o link abaixo para compartilhar o cardápio:', window.location.href);
-                }
-            });
-        }
-
-        // Botão de fechar modal de login
-        const closeLoginBtn = document.querySelector('#admin-login-modal .close');
-        if (closeLoginBtn) {
-            closeLoginBtn.addEventListener('click', () => {
-                const adminLoginModal = document.getElementById('admin-login-modal');
-                if (adminLoginModal) {
-                    adminLoginModal.style.display = 'none';
-                }
-            });
-        }
-
-        // Adicionar listener para o input de endereço
-        const addressInput = document.getElementById('customer-address');
-        if (addressInput) {
-            addressInput.addEventListener('input', debounce(calculateDeliveryFee, 500));
-        }
-
-        // Fechar modais quando clicar fora
-        window.addEventListener('click', (event) => {
-            const adminLoginModal = document.getElementById('admin-login-modal');
-            const adminPanel = document.getElementById('admin-panel');
+        try {
+            // Botão flutuante do carrinho
+            if (floatingCartBtn) {
+                console.log('Configurando botão flutuante do carrinho');
+                floatingCartBtn.addEventListener('click', function() {
+                    if (cartElement) {
+                        cartElement.classList.add('open');
+                    }
+                });
+            }
             
-            if (event.target === adminLoginModal) {
-                adminLoginModal.style.display = 'none';
+            // Botão para fechar o carrinho
+            if (closeCartBtn) {
+                console.log('Configurando botão para fechar o carrinho');
+                closeCartBtn.addEventListener('click', function() {
+                    if (cartElement) {
+                        cartElement.classList.remove('open');
+                    }
+                });
             }
-            if (event.target === adminPanel) {
-                adminPanel.style.display = 'none';
-            }
-        });
 
-        // Botão para limpar carrinho
-        if (clearCartBtn) {
-            clearCartBtn.addEventListener('click', function() {
-                if (confirm('Tem certeza que deseja limpar o carrinho?')) {
-                    cartManager.clearCart();
-                    renderCart();
-                    updateCartBadge();
-                }
+            // Event listener para o botão de finalizar pedido
+            const checkoutButton = document.getElementById('checkoutButton');
+            if (checkoutButton) {
+                console.log('Configurando botão de finalizar pedido');
+                checkoutButton.addEventListener('click', function() {
+                    console.log('Botão finalizar pedido clicado');
+                    const cart = cartManager.getCart();
+                    if (cart.length === 0) {
+                        showNotification('Adicione produtos ao carrinho primeiro!', 'error');
+                        return;
+                    }
+
+                    // Mostrar modal de checkout se existir
+                    const checkoutModal = document.getElementById('checkout-modal');
+                    if (checkoutModal) {
+                        console.log('Abrindo modal de checkout');
+                        checkoutModal.style.display = 'block';
+                        
+                        // Atualizar valores de entrega e total
+                        updateCheckoutTotals();
+                    } else {
+                        console.log('Modal não encontrado, enviando direto para WhatsApp');
+                        sendWhatsAppOrder();
+                    }
+                });
+            }
+
+            // Configurar botões de fechar modal
+            const closeModalButtons = document.querySelectorAll('.close');
+            closeModalButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    console.log('Botão fechar modal clicado');
+                    const modal = this.closest('.modal');
+                    if (modal) {
+                        console.log('Fechando modal');
+                        modal.style.display = 'none';
+                    }
+                });
             });
+
+            // Configurar formulário de checkout
+            const checkoutForm = document.getElementById('checkout-form');
+            if (checkoutForm) {
+                console.log('Configurando formulário de checkout');
+                
+                // Inicializar comportamento do campo de troco
+                handlePaymentMethodChange();
+                
+                checkoutForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    console.log('Formulário de checkout enviado');
+                    sendWhatsAppOrder();
+                    
+                    // Fechar o modal após envio
+                    const checkoutModal = document.getElementById('checkout-modal');
+                    if (checkoutModal) {
+                        checkoutModal.style.display = 'none';
+                    }
+                });
+            }
+
+            // Configurar comportamento de tipo de entrega
+            const deliveryTypeInputs = document.querySelectorAll('input[name="delivery-type"]');
+            deliveryTypeInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    console.log('Tipo de entrega alterado para:', this.value);
+                    const addressContainer = document.getElementById('delivery-address-container');
+                    const quadraInput = document.getElementById('quadra');
+                    const loteInput = document.getElementById('lote');
+                    
+                    if (addressContainer) {
+                        if (this.value === 'delivery') {
+                            addressContainer.style.display = 'block';
+                            if (quadraInput) quadraInput.required = true;
+                            if (loteInput) loteInput.required = true;
+                        } else {
+                            addressContainer.style.display = 'none';
+                            if (quadraInput) quadraInput.required = false;
+                            if (loteInput) loteInput.required = false;
+                        }
+                    }
+                    updateCheckoutTotals();
+                });
+            });
+
+            // Disparar o evento change no radio button selecionado inicialmente
+            const selectedDeliveryType = document.querySelector('input[name="delivery-type"]:checked');
+            if (selectedDeliveryType) {
+                selectedDeliveryType.dispatchEvent(new Event('change'));
+            }
+
+            // Payment method change event
+            const paymentMethodSelect = document.getElementById('payment-method');
+            if (paymentMethodSelect) {
+                paymentMethodSelect.addEventListener('change', handlePaymentMethodChange);
+                handlePaymentMethodChange();
+            }
+        } catch (error) {
+            console.error('Erro ao configurar event listeners:', error);
+        }
+    }
+
+    // Função para atualizar os valores no checkout
+    function updateCheckoutTotals() {
+        console.log('Atualizando totais do checkout');
+        const cartTotal = cartManager.getCartTotal();
+        console.log('Total do carrinho:', cartTotal);
+        
+        // Atualizar subtotal
+        const subtotalElement = document.getElementById('order-subtotal');
+        if (subtotalElement) {
+            subtotalElement.textContent = `R$ ${cartTotal.toFixed(2)}`;
         }
         
-        // Botão para fazer pedido via WhatsApp
-        if (orderBtn) {
-            orderBtn.addEventListener('click', async function() {
-                if (appData.cart.length === 0) {
-                    alert('Seu carrinho está vazio. Adicione produtos antes de fazer o pedido.');
+        // Obter valor da taxa de entrega
+        let deliveryFee = 0;
+        const deliveryFeeElement = document.getElementById('delivery-fee');
+        
+        // Verificar se é entrega
+        const deliveryRadio = document.querySelector('input[name="delivery-type"][value="delivery"]');
+        const isDelivery = deliveryRadio && deliveryRadio.checked;
+        
+        if (isDelivery) {
+            try {
+                deliveryFee = parseFloat(configManager.getConfig('deliveryFee') || '0');
+                console.log('Taxa de entrega:', deliveryFee);
+            } catch (error) {
+                console.warn('Erro ao obter taxa de entrega:', error);
+                deliveryFee = 0;
+            }
+        }
+        
+        if (deliveryFeeElement) {
+            deliveryFeeElement.textContent = `R$ ${deliveryFee.toFixed(2)}`;
+        }
+        
+        // Calcular e atualizar total
+        const totalElement = document.getElementById('order-total');
+        if (totalElement) {
+            const total = cartTotal + (isDelivery ? deliveryFee : 0);
+            console.log('Total final:', total);
+            totalElement.textContent = `R$ ${total.toFixed(2)}`;
+        }
+    }
+
+    // Função para lidar com mudança no método de pagamento
+    function handlePaymentMethodChange() {
+        const paymentSelect = document.getElementById('payment-method');
+        const changeAmountContainer = document.getElementById('change-container');
+        
+        if (paymentSelect && changeAmountContainer) {
+            const selectedMethod = paymentSelect.options[paymentSelect.selectedIndex].text;
+            
+            if (selectedMethod.includes('Dinheiro')) {
+                changeAmountContainer.style.display = 'block';
+            } else {
+                changeAmountContainer.style.display = 'none';
+            }
+        }
+    }
+
+    // Envia o pedido via WhatsApp
+    async function sendWhatsAppOrder() {
+        console.log('Preparando para enviar pedido por WhatsApp');
+        
+        // Verificar se o modal de checkout está sendo usado
+        const checkoutModal = document.getElementById('checkout-modal');
+        
+        let customerName = '';
+        let customerAddress = '';
+        let paymentMethod = '';
+        let changeAmount = '';
+        let tipoEntrega = '';
+        let deliveryFee = 0;
+        
+        // Se estiver usando o modal de checkout, pegar os dados do formulário
+        if (checkoutModal && checkoutModal.style.display === 'block') {
+            console.log('Obtendo dados do formulário de checkout');
+            
+            // Obter valores dos campos
+            customerName = document.getElementById('customer-name').value;
+            
+            // Verificar campos obrigatórios
+            if (!customerName) {
+                showNotification('Por favor, informe seu nome', 'error');
+                return;
+            }
+
+            // Obter tipo de entrega
+            const deliveryOptions = document.getElementsByName('delivery-type');
+            for (const option of deliveryOptions) {
+                if (option.checked) {
+                    tipoEntrega = option.value;
+                    break;
+                }
+            }
+
+            // Se for entrega, validar endereço
+            if (tipoEntrega === 'delivery') {
+                const quadra = document.getElementById('quadra').value;
+                const lote = document.getElementById('lote').value;
+                const complemento = document.getElementById('complemento').value || '';
+                
+                if (!quadra || !lote) {
+                    showNotification('Por favor, informe sua quadra e lote', 'error');
                     return;
                 }
                 
-                await sendWhatsAppOrder();
-            });
+                // Construir endereço
+                customerAddress = `Quadra ${quadra}, Lote ${lote}`;
+                if (complemento) {
+                    customerAddress += `, ${complemento}`;
+                }
+            }
+            
+            // Obter método de pagamento
+            const paymentSelect = document.getElementById('payment-method');
+            if (!paymentSelect.value) {
+                showNotification('Por favor, selecione a forma de pagamento', 'error');
+                return;
+            }
+            paymentMethod = paymentSelect.options[paymentSelect.selectedIndex].text;
+            
+            // Se for pagamento em dinheiro, verificar troco
+            if (paymentMethod.includes('Dinheiro')) {
+                changeAmount = document.getElementById('change-amount').value;
+                if (changeAmount && !isNaN(parseFloat(changeAmount))) {
+                    changeAmount = `Troco para R$ ${parseFloat(changeAmount).toFixed(2)}`;
+                } else {
+                    changeAmount = 'Sem troco';
+                }
+            }
+            
+            // Calcular taxa de entrega
+            if (tipoEntrega === 'delivery') {
+                deliveryFee = parseFloat(document.getElementById('delivery-fee').innerText.replace('R$', '').trim()) || 0;
+            }
         }
         
-        // Botão flutuante do carrinho (mobile)
-        if (floatingCartBtn) {
-            floatingCartBtn.addEventListener('click', function() {
-                cartElement.classList.add('open');
-            });
+        // Obter itens do carrinho
+        const cart = cartManager.getCart();
+        let itemsText = '';
+        let total = 0;
+        
+        cart.forEach(item => {
+            // Formatar o texto para cada item do carrinho
+            let itemText = `${item.quantity}x ${item.title} - R$ ${(item.price * item.quantity).toFixed(2)}\n`;
+            
+            // Adicionar sabores selecionados, se houver
+            if (item.selectedFlavors && item.selectedFlavors.length > 0) {
+                const flavorText = item.selectedFlavors.map((flavor, index) => 
+                    `   Sabor ${index + 1}: ${flavor.name}`
+                ).join('\n');
+                itemText += `${flavorText}\n`;
+            }
+            
+            itemsText += itemText;
+            total += item.price * item.quantity;
+        });
+        
+        // Adicionar taxa de entrega ao total, se aplicável
+        if (tipoEntrega === 'delivery') {
+            total += deliveryFee;
+            itemsText += `\nTaxa de entrega: R$ ${deliveryFee.toFixed(2)}`;
         }
         
-        // Botão para fechar o carrinho (mobile)
-        if (closeCartBtn) {
-            closeCartBtn.addEventListener('click', function() {
-                cartElement.classList.remove('open');
-            });
+        // Adicionar total
+        itemsText += `\nTotal: R$ ${total.toFixed(2)}`;
+        
+        // Construir a mensagem completa para o WhatsApp
+        let message = `*Novo Pedido*\n\n`;
+        
+        if (customerName) {
+            message += `*Nome:* ${customerName}\n`;
         }
         
-        // Verificar se o checkout está funcionando corretamente
-        // Isso serve apenas para debug, a função sendToWhatsApp já configura o formulário
-        const checkoutForm = document.getElementById('checkout-form');
-        if (checkoutForm) {
-            console.log('Formulário de checkout encontrado');
-            // Adicionar listener para verificar se o evento submit está sendo disparado
-            checkoutForm.addEventListener('submit', function(e) {
-                console.log('Evento submit do formulário de checkout capturado manualmente');
-                // Não prevenir o comportamento padrão aqui, deixar a função sendToWhatsApp lidar com isso
-            });
+        if (customerAddress) {
+            message += `*Endereço:* ${customerAddress}\n`;
+        }
+        
+        if (paymentMethod) {
+            message += `*Pagamento:* ${paymentMethod}\n`;
+            if (changeAmount && paymentMethod.includes('Dinheiro')) {
+                message += `*Troco:* ${changeAmount}\n`;
+            }
+        }
+        
+        if (tipoEntrega) {
+            message += `*Tipo de entrega:* ${tipoEntrega === 'delivery' ? 'Entrega' : 'Retirada'}\n`;
+        }
+        
+        message += `\n*Itens do pedido:*\n${itemsText}`;
+        
+        // Codificar a mensagem para URL
+        const encodedMessage = encodeURIComponent(message);
+        
+        // Construir o link do WhatsApp usando o número correto do link fornecido
+        const phoneNumber = '556294535053';
+        const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+        
+        console.log('Link WhatsApp gerado:', whatsappLink);
+        
+        // Fechar o modal se estiver aberto
+        if (checkoutModal && checkoutModal.style.display === 'block') {
+            checkoutModal.style.display = 'none';
+        }
+        
+        // Limpar o carrinho
+        cartManager.clearCart();
+        
+        // Abrir o WhatsApp
+        window.open(whatsappLink, '_blank');
+    }
+
+    // Função auxiliar para obter um produto pelo ID
+    async function getProductDetails(productId) {
+        try {
+            // Primeiro tenta buscar no DOM (se estiver visível na página atual)
+            const productElement = document.querySelector(`.product-card [data-product-id="${productId}"]`);
+            if (productElement) {
+                const productCard = productElement.closest('.product-card');
+                const productName = productCard.querySelector('.product-name').textContent;
+                const productPriceText = productCard.querySelector('.product-price').textContent.trim();
+                const productPrice = parseFloat(productPriceText.replace('R$', '').replace(',', '.').trim()) || 0;
+                
+                console.log(`Produto encontrado no DOM: ${productName}, Preço: R$ ${productPrice}`);
+                return {
+                    id: productId,
+                    title: productName,
+                    price: productPrice
+                };
+            }
+            
+            // Se não encontrou no DOM, busca no Firebase
+            console.log(`Produto não encontrado no DOM, buscando no Firebase: ${productId}`);
+            const snapshot = await window.appFirebase.productsRef.doc(productId).get();
+            if (snapshot.exists) {
+                const product = snapshot.data();
+                return {
+                    id: productId,
+                    title: product.name,
+                    price: parseFloat(product.price) || 0
+                };
+            }
+            
+            // Se não encontrou, retorna um objeto básico
+            console.warn(`Produto não encontrado: ${productId}`);
+            return {
+                id: productId,
+                title: 'Produto',
+                price: 0
+            };
+        } catch (error) {
+            console.error('Erro ao buscar detalhes do produto:', error);
+            return {
+                id: productId,
+                title: 'Produto',
+                price: 0
+            };
         }
     }
 
@@ -885,22 +1198,24 @@ document.addEventListener('DOMContentLoaded', function() {
         // Limpar o conteúdo atual
         cartContainer.innerHTML = '';
         
-        // Ocultar a mensagem de carrinho vazio se existir
-        const emptyCartMessage = document.getElementById('empty-cart-message');
-        if (emptyCartMessage) {
-            emptyCartMessage.style.display = cart.length === 0 ? 'block' : 'none';
-        }
+        // Criar mensagem de carrinho vazio
+        const emptyMessage = document.createElement('div');
+        emptyMessage.id = 'empty-cart-message';
+        emptyMessage.className = 'empty-message';
+        emptyMessage.innerHTML = '<p>Seu carrinho está vazio</p>';
         
         // Container para itens do carrinho
         const cartItemsContainer = document.createElement('div');
         cartItemsContainer.className = 'cart-items-list';
         
         // Verificar se o carrinho está vazio
-        if (cart.length === 0) {
-            // Não precisamos fazer nada aqui, a mensagem empty-cart-message já deve estar visível
-            // Garantir que o total seja zerado
+        if (!cart || cart.length === 0) {
+            cartContainer.appendChild(emptyMessage);
             updateCartTotal(0);
         } else {
+            // Ocultar mensagem de carrinho vazio
+            emptyMessage.style.display = 'none';
+            
             let total = 0;
             
             // Criar elementos para cada item do carrinho
@@ -994,13 +1309,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const decreaseBtn = document.createElement('button');
                 decreaseBtn.textContent = '-';
+                decreaseBtn.className = 'decrease-btn';
                 decreaseBtn.addEventListener('click', () => {
-                    if (item.quantity > 1) {
-                        item.quantity--;
-                        cartManager.decreaseQuantity(item.productId, item.selectedFlavors || []);
-                        renderCart();
-                        updateCartBadge();
-                    }
+                    cartManager.decreaseQuantity(item.productId, item.selectedFlavors || []);
+                    renderCart();
+                    updateCartBadge();
                 });
                 
                 const quantityDisplay = document.createElement('span');
@@ -1009,8 +1322,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const increaseBtn = document.createElement('button');
                 increaseBtn.textContent = '+';
+                increaseBtn.className = 'increase-btn';
                 increaseBtn.addEventListener('click', () => {
-                    item.quantity++;
                     cartManager.increaseQuantity(item.productId, item.selectedFlavors || []);
                     renderCart();
                     updateCartBadge();
@@ -1026,11 +1339,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 removeBtn.className = 'remove-item';
                 removeBtn.textContent = 'Remover';
                 removeBtn.addEventListener('click', () => {
-                    if (confirm('Tem certeza que deseja remover este item?')) {
-                        cartManager.removeFromCart(item.productId, item.selectedFlavors || []);
-                        renderCart();
-                        updateCartBadge();
-                    }
+                    cartManager.removeFromCart(item.productId, item.selectedFlavors || []);
+                    renderCart();
+                    updateCartBadge();
                 });
                 cartItem.appendChild(removeBtn);
                 
@@ -1082,404 +1393,6 @@ document.addEventListener('DOMContentLoaded', function() {
             cartBadge.style.display = 'none';
         } else {
             cartBadge.style.display = 'flex';
-        }
-    }
-
-    // Prepara e envia o pedido para o WhatsApp
-    async function sendWhatsAppOrder() {
-        try {
-            if (!navigator.onLine) {
-                showNotification('Você está offline. Conecte-se à internet para finalizar o pedido.', 'error');
-                return;
-            }
-
-            const cart = await getCartItems();
-            if (cart.length === 0) {
-                showNotification('Adicione produtos ao carrinho primeiro!', 'error');
-                return;
-            }
-
-            // Pega informações do cliente
-            const name = document.getElementById('clientName').value.trim();
-            const address = document.getElementById('clientAddress').value.trim();
-
-            if (!name || !address) {
-                showNotification('Preencha seu nome e endereço para continuar', 'error');
-                return;
-            }
-
-            let totalPrice = 0;
-            // Constrói a mensagem para WhatsApp
-            let message = `*Novo Pedido*\n\n*Cliente:* ${name}\n*Endereço:* ${address}\n\n*Produtos:*\n`;
-
-            cart.forEach(item => {
-                let itemPrice = parseFloat(item.price || 0);
-                
-                // Adicionar texto dos sabores e preços extras
-                let flavorText = '';
-                if (item.selectedFlavors && item.selectedFlavors.length > 0) {
-                    const flavorNames = item.selectedFlavors.map(f => f.name).join(', ');
-                    flavorText = `\n   - Sabores: ${flavorNames}`;
-                    
-                    // Calcular preço extra dos sabores
-                    item.selectedFlavors.forEach(flavor => {
-                        if (flavor.extraPrice) {
-                            const extraPrice = parseFloat(flavor.extraPrice) || 0;
-                            itemPrice += extraPrice;
-                        }
-                    });
-                } else if (item.flavor && item.flavor.name) {
-                    flavorText = `\n   - Sabor: ${item.flavor.name}`;
-                    
-                    // Adicionar preço extra do sabor
-                    if (item.flavor.extraPrice) {
-                        const extraPrice = parseFloat(item.flavor.extraPrice) || 0;
-                        itemPrice += extraPrice;
-                    }
-                }
-                
-                const itemTotal = itemPrice * item.quantity;
-                totalPrice += itemTotal;
-                
-                message += `\n• ${item.quantity}x ${item.title || item.name} - R$ ${itemTotal.toFixed(2)}${flavorText}`;
-            });
-
-            message += `\n\n*Total:* R$ ${totalPrice.toFixed(2)}`;
-
-            // Pega número de WhatsApp da configuração
-            let whatsappNumber = appConfig.whatsappNumber || "5511999999999";
-            if (whatsappNumber.startsWith("+")) {
-                whatsappNumber = whatsappNumber.substring(1);
-            }
-            if (!whatsappNumber.startsWith("55")) {
-                whatsappNumber = "55" + whatsappNumber;
-            }
-
-            // Adiciona forma de pagamento se disponível
-            const paymentMethod = document.getElementById('paymentMethod');
-            if (paymentMethod && paymentMethod.value) {
-                message += `\n\n*Forma de Pagamento:* ${paymentMethod.value}`;
-            }
-
-            // Codifica a mensagem para URL
-            const encodedMessage = encodeURIComponent(message);
-            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
-
-            // Limpa o carrinho se confirmado
-            if (confirm('Você será redirecionado para o WhatsApp para finalizar seu pedido. Continuar?')) {
-                cartManager.clearCart();
-                renderCart();
-                updateCartBadge();
-                window.open(whatsappUrl, '_blank');
-            }
-        } catch (error) {
-            console.error('Erro ao enviar pedido:', error);
-            showNotification('Ocorreu um erro ao processar seu pedido', 'error');
-        }
-    }
-
-    // Função para obter itens do carrinho com detalhes
-    async function getCartItems() {
-        const allProducts = await productManager.getProducts();
-        return appData.cart.map(item => {
-            const product = allProducts.find(prod => prod.id === item.productId);
-            if (product) {
-                return {
-                    ...product,
-                    quantity: item.quantity,
-                    selectedFlavors: item.selectedFlavors || [],  // Formato padronizado para sabores
-                    flavor: item.flavor || null,   // Compatibilidade com formato antigo
-                    hasFlavors: product.hasFlavors || false,
-                    allowMultipleFlavors: product.allowMultipleFlavors || false,
-                    flavorQuantity: product.flavorQuantity || 1
-                };
-            }
-            return null;
-        }).filter(item => item !== null);
-    }
-
-    // Expor funções globalmente
-    window.cardapioApp = {
-        renderCart,
-        updateCartBadge
-    };
-
-    // Gerenciar modal de política de privacidade
-    const privacyLink = document.getElementById('privacy-link');
-    const privacyModal = document.getElementById('privacy-modal');
-    const privacyClose = document.querySelector('.privacy-close');
-    
-    if (privacyLink && privacyModal) {
-        privacyLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            privacyModal.style.display = 'block';
-        });
-        
-        if (privacyClose) {
-            privacyClose.addEventListener('click', function() {
-                privacyModal.style.display = 'none';
-            });
-        }
-        
-        window.addEventListener('click', function(e) {
-            if (e.target === privacyModal) {
-                privacyModal.style.display = 'none';
-            }
-        });
-    }
-
-    // Adicionar listeners para mudanças no tipo de entrega e endereço
-    document.addEventListener('DOMContentLoaded', function() {
-        const deliveryTypeInputs = document.querySelectorAll('input[name="delivery-type"]');
-        const addressInput = document.getElementById('customer-address');
-        const deliveryAddressContainer = document.getElementById('delivery-address-container');
-        const deliveryFeeInfo = document.getElementById('delivery-fee-info');
-        const deliveryFeeElement = document.getElementById('delivery-fee');
-        const orderSubtotalElement = document.getElementById('order-subtotal');
-        const orderTotalElement = document.getElementById('order-total');
-        const checkoutButton = document.querySelector('.submit-btn');
-
-        // Função para atualizar a visibilidade do container de endereço
-        function updateDeliveryContainer() {
-            const deliveryType = document.querySelector('input[name="delivery-type"]:checked')?.value;
-            const addressContainer = document.getElementById('delivery-address-container');
-            const deliveryFeeInfo = document.getElementById('delivery-fee-info');
-            
-            console.log('Tipo de entrega selecionado:', deliveryType);
-            console.log('Container de endereço encontrado:', !!addressContainer);
-
-            if (!addressContainer) {
-                console.error('Container de endereço não encontrado');
-                return;
-            }
-
-            if (deliveryType === 'pickup') {
-                addressContainer.style.display = 'none';
-                document.getElementById('customer-address').value = '';
-                if (deliveryFeeInfo) {
-                    deliveryFeeInfo.innerHTML = '<p class="fee-info" style="color: #28a745;"><i class="fas fa-store"></i> Retirada gratuita na loja</p>';
-                }
-                window.currentDelivery = {
-                    fee: 0,
-                    distance: 0,
-                    type: 'pickup'
-                };
-                updateTotal();
-            } else {
-                addressContainer.style.display = 'block';
-                calculateDeliveryFee();
-            }
-        }
-        
-        // Função para atualizar o total quando o modo pickup é selecionado
-        function updateTotal() {
-            const orderSubtotalElement = document.getElementById('order-subtotal');
-            const deliveryFeeElement = document.getElementById('delivery-fee');
-            const orderTotalElement = document.getElementById('order-total');
-            const checkoutButton = document.querySelector('.submit-btn');
-            
-            if (deliveryFeeElement) {
-                deliveryFeeElement.textContent = 'R$ 0,00';
-            }
-            
-            if (orderSubtotalElement && orderTotalElement) {
-                const subtotal = parseFloat(orderSubtotalElement.textContent.replace(/[^\d,\.]/g, '').replace(',', '.')) || 0;
-                orderTotalElement.textContent = `R$ ${subtotal.toFixed(2)}`;
-            }
-            
-            // Habilitar botão de checkout
-            if (checkoutButton) {
-                checkoutButton.disabled = false;
-            }
-        }
-
-        if (deliveryTypeInputs) {
-            deliveryTypeInputs.forEach(input => {
-                input.addEventListener('change', updateDeliveryContainer);
-            });
-        }
-
-        if (addressInput) {
-            if (/Mobi|Android/i.test(navigator.userAgent)) {
-                addressInput.addEventListener('input', calculateDeliveryFee);
-            } else {
-                addressInput.addEventListener('input', debounce(calculateDeliveryFee, 500));
-            }
-            addressInput.addEventListener('blur', calculateDeliveryFee);
-        }
-
-        // Verificar estado inicial
-        const initialDeliveryType = document.querySelector('input[name="delivery-type"]:checked');
-        if (initialDeliveryType) {
-            updateDeliveryContainer();
-        }
-    });
-
-    // Função para calcular taxa de entrega
-    async function calculateDeliveryFee() {
-        // Declarar variáveis fora do try para estarem acessíveis no catch
-        const addressInput = document.getElementById('customer-address');
-        const deliveryFeeInfo = document.getElementById('delivery-fee-info');
-        const deliveryFeeElement = document.getElementById('delivery-fee');
-        const orderSubtotalElement = document.getElementById('order-subtotal');
-        const orderTotalElement = document.getElementById('order-total');
-        const checkoutButton = document.querySelector('.submit-btn');
-        const deliveryAddressContainer = document.getElementById('delivery-address-container'); // Mantido para referência, mas não para estilo
-        const deliveryType = document.querySelector('input[name="delivery-type"]:checked')?.value || 'delivery';
-
-        try {
-            // Verificar se o campo de endereço está preenchido (necessário para cálculo)
-            if (!addressInput || !addressInput.value.trim()) {
-                if (deliveryFeeInfo) {
-                    deliveryFeeInfo.style.display = 'block';
-                    deliveryFeeInfo.innerHTML = '<p class="fee-info">Digite seu endereço para calcular a taxa de entrega</p>';
-                }
-                if (deliveryFeeElement) {
-                    deliveryFeeElement.textContent = 'R$ 0,00';
-                }
-                if (checkoutButton) {
-                    checkoutButton.disabled = true;
-                }
-                window.currentDelivery = null; // Resetar info de entrega
-                return;
-            }
-
-            // Mostrar indicador de carregamento
-            if (deliveryFeeInfo) {
-                deliveryFeeInfo.style.display = 'block';
-                deliveryFeeInfo.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Calculando taxa de entrega...</p>';
-            }
-            if (checkoutButton) {
-                checkoutButton.disabled = true;
-            }
-
-            // Obter o total do pedido
-            let cartTotal = 0;
-            if (orderSubtotalElement) {
-                cartTotal = parseFloat(orderSubtotalElement.textContent.replace(/[^\d,\.]/g, '').replace(',', '.')) || 0;
-            }
-
-            console.log('Iniciando cálculo de taxa para:', addressInput.value);
-
-            // Calcular taxa de entrega usando deliveryManager
-            const result = await window.deliveryManager.calculateDeliveryFee(addressInput.value, cartTotal);
-
-            console.log('Resultado do cálculo (app.js):', result);
-
-            // Atualizar informações
-            if (deliveryFeeElement) {
-                deliveryFeeElement.textContent = `R$ ${result.fee.toFixed(2)}`;
-            }
-            
-            // Atualizar total com entrega
-            if (orderTotalElement) {
-                const totalWithDelivery = cartTotal + result.fee;
-                orderTotalElement.textContent = `R$ ${totalWithDelivery.toFixed(2)}`;
-            }
-
-            // Mostrar informações da entrega
-            if (deliveryFeeInfo) {
-                deliveryFeeInfo.innerHTML = `
-                    <p class="distance-info">Distância: ${result.distance.toFixed(1)}km</p>
-                    <p class="fee-info">${result.message || `Taxa de entrega: R$ ${result.fee.toFixed(2)}`}</p>
-                `;
-            }
-
-            // Habilitar botão de checkout
-            if (checkoutButton) {
-                checkoutButton.disabled = false;
-            }
-
-            // Armazenar informações para uso posterior
-            window.currentDelivery = {
-                type: 'delivery',
-                address: addressInput.value,
-                fee: result.fee,
-                distance: result.distance
-            };
-
-        } catch (error) {
-            console.error('Erro ao calcular taxa de entrega (app.js):', error);
-            // Usar as variáveis declaradas fora do try
-            if (deliveryFeeInfo) {
-                deliveryFeeInfo.style.display = 'block';
-                deliveryFeeInfo.innerHTML = `
-                    <p class="error-message" style="color: var(--danger-color);">
-                        <i class="fas fa-exclamation-circle"></i> ${error.message || 'Erro ao calcular taxa.'}
-                    </p>
-                `;
-            }
-            
-            if (deliveryFeeElement) {
-                deliveryFeeElement.textContent = 'R$ --'; // Indicar erro
-            }
-            
-            if (checkoutButton) {
-                checkoutButton.disabled = true;
-            }
-            
-            window.currentDelivery = null; // Resetar info de entrega em caso de erro
-        }
-    }
-
-    // Função de debounce para evitar muitas chamadas
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
-    // Função auxiliar para obter um produto pelo ID
-    async function getProductDetails(productId) {
-        try {
-            // Primeiro tenta buscar no DOM (se estiver visível na página atual)
-            const productElement = document.querySelector(`.product-card [data-product-id="${productId}"]`);
-            if (productElement) {
-                const productCard = productElement.closest('.product-card');
-                const productName = productCard.querySelector('.product-name').textContent;
-                const productPriceText = productCard.querySelector('.product-price').textContent.trim();
-                const productPrice = parseFloat(productPriceText.replace('R$', '').replace(',', '.').trim()) || 0;
-                
-                console.log(`Produto encontrado no DOM: ${productName}, Preço: R$ ${productPrice}`);
-                return {
-                    id: productId,
-                    title: productName,
-                    price: productPrice
-                };
-            }
-            
-            // Se não encontrou no DOM, busca no Firebase
-            console.log(`Produto não encontrado no DOM, buscando no Firebase: ${productId}`);
-            const snapshot = await window.appFirebase.productsRef.doc(productId).get();
-            if (snapshot.exists) {
-                const product = snapshot.data();
-                return {
-                    id: productId,
-                    title: product.name,
-                    price: parseFloat(product.price) || 0
-                };
-            }
-            
-            // Se não encontrou, retorna um objeto básico
-            console.warn(`Produto não encontrado: ${productId}`);
-            return {
-                id: productId,
-                title: 'Produto',
-                price: 0
-            };
-        } catch (error) {
-            console.error('Erro ao buscar detalhes do produto:', error);
-            return {
-                id: productId,
-                title: 'Produto',
-                price: 0
-            };
         }
     }
 });
