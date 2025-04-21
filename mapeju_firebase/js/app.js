@@ -673,19 +673,37 @@ document.addEventListener('DOMContentLoaded', function() {
         let total = 0;
         
         cart.forEach(item => {
-            // Formatar o texto para cada item do carrinho
-            let itemText = `${item.quantity}x ${item.title} - R$ ${(item.price * item.quantity).toFixed(2)}\n`;
+            // Calcular o preço base do item
+            let itemBasePrice = parseFloat(item.price) || 0;
+            let itemTotalPrice = itemBasePrice * item.quantity;
             
-            // Adicionar sabores selecionados, se houver
+            // Formatar o texto para cada item do carrinho
+            let itemText = `${item.quantity}x ${item.title} - R$ ${itemBasePrice.toFixed(2)}/un\n`;
+            
+            // Adicionar informações sobre sabores selecionados, se houver
             if (item.selectedFlavors && item.selectedFlavors.length > 0) {
-                const flavorText = item.selectedFlavors.map((flavor, index) => 
-                    `   Sabor ${index + 1}: ${flavor.name}`
-                ).join('\n');
-                itemText += `${flavorText}\n`;
+                itemText += `   Sabores selecionados:\n`;
+                
+                // Adicionar cada sabor com seu preço extra, se aplicável
+                item.selectedFlavors.forEach((flavor, index) => {
+                    itemText += `   - ${flavor.name}`;
+                    
+                    // Adicionar preço extra ao total do item, se houver
+                    if (flavor.extraPrice && parseFloat(flavor.extraPrice) > 0) {
+                        const extraPrice = parseFloat(flavor.extraPrice);
+                        itemText += ` (+R$ ${extraPrice.toFixed(2)})`;
+                        itemTotalPrice += extraPrice * item.quantity;
+                    }
+                    
+                    itemText += '\n';
+                });
             }
             
+            // Adicionar preço total do item, incluindo extras dos sabores
+            itemText += `   Subtotal: R$ ${itemTotalPrice.toFixed(2)}\n\n`;
+            
             itemsText += itemText;
-            total += item.price * item.quantity;
+            total += itemTotalPrice;
         });
         
         // Adicionar taxa de entrega ao total, se aplicável
