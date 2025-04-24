@@ -46,10 +46,19 @@ function setupFirebaseServices() {
   });
   
   // Configurar coleções do Firestore
-  window.categoriesRef = db.collection('categories');
-  window.productsRef = db.collection('products');
-  window.cartsRef = db.collection('carts');
-  window.imagesRef = db.collection('product_images'); // Mantido para migração
+  const categoriesRef = db.collection('categories');
+  const productsRef = db.collection('products');
+  const cartsRef = db.collection('carts');
+  const imagesRef = db.collection('product_images'); // Mantido para migração
+  
+  // Definir variáveis globais para o Firebase
+  window.db = db;
+  window.auth = auth;
+  window.firebase = firebase;
+  window.categoriesRef = categoriesRef;
+  window.productsRef = productsRef;
+  window.cartsRef = cartsRef;
+  window.imagesRef = imagesRef;
   
   // Configurar listener de autenticação
   setupAuthListener(auth);
@@ -273,7 +282,7 @@ async function loadProductImage(imageData) {
             try {
                 // Tentar carregar a imagem do formato antigo
                 const imageId = imageData.replace('firestore-image://', '');
-                const imageDoc = await imagesRef.doc(imageId).get();
+                const imageDoc = await window.imagesRef.doc(imageId).get();
                 
                 if (!imageDoc.exists) {
                     console.log('Imagem não encontrada, usando padrão');
@@ -286,7 +295,7 @@ async function loadProductImage(imageData) {
                     // Se encontrarmos a imagem, vamos atualizar o produto para o novo formato
                     try {
                         // Obter o ID do produto atual
-                        const productQuery = await productsRef.where('image', '==', imageData).get();
+                        const productQuery = await window.productsRef.where('image', '==', imageData).get();
                         if (!productQuery.empty) {
                             const productDoc = productQuery.docs[0];
                             // Atualizar o produto com o novo formato
@@ -306,7 +315,7 @@ async function loadProductImage(imageData) {
                 if (imageInfo.type === 'chunked-image') {
                     let fullImageData = '';
                     for (let i = 0; i < imageInfo.chunks; i++) {
-                        const chunkDoc = await imagesRef.doc(`${imageId}_chunk_${i}`).get();
+                        const chunkDoc = await window.imagesRef.doc(`${imageId}_chunk_${i}`).get();
                         if (chunkDoc.exists) {
                             fullImageData += chunkDoc.data().data;
                         }
@@ -315,7 +324,7 @@ async function loadProductImage(imageData) {
                     if (fullImageData) {
                         // Atualizar o produto com o novo formato
                         try {
-                            const productQuery = await productsRef.where('image', '==', imageData).get();
+                            const productQuery = await window.productsRef.where('image', '==', imageData).get();
                             if (!productQuery.empty) {
                                 const productDoc = productQuery.docs[0];
                                 await productDoc.ref.update({
@@ -344,17 +353,21 @@ async function loadProductImage(imageData) {
 
 // Exportar objetos do Firebase para uso em outros scripts
 window.appFirebase = {
+  db: window.db,
+  auth: window.auth,
+  firebase: window.firebase,
+  categoriesRef: window.categoriesRef,
+  productsRef: window.productsRef,
+  cartsRef: window.cartsRef,
+  imagesRef: window.imagesRef,
   generateId,
   showNotification,
   uploadProductImage,
   loadProductImage,
   updateProduct: async function(productId, productData) {
     try {
-        // Obter referências do Firebase quando necessário
-        const db = firebase.firestore();
-        const productsRef = db.collection('products');
-        
-        await productsRef.doc(productId).update({
+        // Usar as referências globais
+        await window.productsRef.doc(productId).update({
             ...productData,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });

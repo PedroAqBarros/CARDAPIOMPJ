@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         init: async function() {
             try {
-                const configRef = db.collection('configs');
+                const configRef = window.db.collection('configs');
                 const snapshot = await configRef.get();
                 snapshot.forEach(doc => {
                     this.configs[doc.id] = doc.data().value;
@@ -376,32 +376,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Inicializar a aplicação
     async function initApp() {
+        console.log('Inicializando aplicação...');
+        
         try {
-            console.log('Inicializando aplicação...');
-            
             // Inicializar configurações
             await configManager.init();
             
-            // Inicializar o carrinho do localStorage
-        cartManager.loadCart();
-            
-            // Verificar se o carrinho foi carregado corretamente
+            // Inicializar carrinho
+            cartManager.init();
             console.log('Carrinho inicializado com', appData.cart.length, 'itens');
-        
-        // Configurar eventos
-        setupEventListeners();
-        
-        // Renderizar carrinho
-        renderCart();
-        
-        // Atualizar badge do carrinho
-        updateCartBadge();
-        
-        // Iniciar sincronização em tempo real
-        startRealtimeSync();
+            
+            // Configurações de interface
+            setupEventListeners();
+            
+            // Aguardar o Firebase ser inicializado
+            if (!window.db || !window.categoriesRef || !window.productsRef) {
+                console.error('Referências do Firebase não disponíveis. Aguardando...');
+                await new Promise(resolve => {
+                    const checkFirebase = () => {
+                        if (window.db && window.categoriesRef && window.productsRef) {
+                            resolve();
+                        } else {
+                            setTimeout(checkFirebase, 100);
+                        }
+                    };
+                    checkFirebase();
+                });
+            }
+            
+            // Iniciar sincronização em tempo real
+            startRealtimeSync();
+            console.log('Aplicação inicializada com sucesso');
+            
         } catch (error) {
             console.error('Erro ao inicializar aplicação:', error);
-            showStartupError('Houve um erro ao inicializar a aplicação. Por favor, recarregue a página.');
+            showStartupError('Ocorreu um erro ao inicializar a aplicação. Por favor, recarregue a página.');
         }
     }
 
@@ -828,7 +837,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Iniciar sincronização de categorias
-        categoriesListener = window.appFirebase.categoriesRef.orderBy('name').onSnapshot(snapshot => {
+        categoriesListener = window.categoriesRef.orderBy('name').onSnapshot(snapshot => {
             const categories = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
@@ -946,12 +955,12 @@ document.addEventListener('DOMContentLoaded', function() {
         productsContainer.innerHTML = '<div class="loading">Carregando produtos...</div>';
         
         // Iniciar sincronização de produtos para a categoria selecionada
-        productsListener = window.appFirebase.productsRef
+        productsListener = window.productsRef
             .where('categoryId', '==', categoryId)
             .onSnapshot(snapshot => {
                 // Limpar container
-        productsContainer.innerHTML = '';
-        
+                productsContainer.innerHTML = '';
+                
                 if (snapshot.empty) {
                     // Mostrar mensagem quando não há produtos
                     const emptyMessage = document.createElement('div');
