@@ -1,6 +1,12 @@
 // Configurações da aplicação
 const APP_CONFIG = {
-    // Google Maps API Key
+    // Método de inicialização (para compatibilidade com a estrutura atual)
+    async init() {
+        // Notifica que as configurações foram carregadas
+        window.dispatchEvent(new Event('app_config_loaded'));
+    },
+    
+    // Configurações diretas com as chaves originais
     GOOGLE_MAPS_API_KEY: 'AIzaSyBrimCGWjJF76ptFZu7frm0hB9iw4Ty0p8',
     
     // Firebase Config
@@ -17,3 +23,8 @@ const APP_CONFIG = {
     // WhatsApp
     WHATSAPP_NUMBER: '556294535053'
 }; 
+
+// Inicializa as configurações quando o arquivo for carregado
+document.addEventListener('DOMContentLoaded', () => {
+    APP_CONFIG.init();
+}); 

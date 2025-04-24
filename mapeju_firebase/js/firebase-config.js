@@ -5,50 +5,104 @@
 // import { getFirestore, collection, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 // import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
-// Usar configuração do arquivo config.js se disponível, ou usar fallback
-let firebaseConfig;
+// Inicialização do Firebase com configuração do APP_CONFIG
+let firebaseInitialized = false;
 
-try {
-  // Verificar se APP_CONFIG está definido (vem do arquivo config.js)
+// Função para inicializar o Firebase quando as configurações estiverem disponíveis
+function initializeFirebase() {
+  if (firebaseInitialized) return;
+
+  // Usar configuração do arquivo config.js
   if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.FIREBASE_CONFIG) {
-    console.log('Usando configuração do arquivo config.js');
-    firebaseConfig = APP_CONFIG.FIREBASE_CONFIG;
+    try {
+      // Inicializar o Firebase
+      firebase.initializeApp(APP_CONFIG.FIREBASE_CONFIG);
+      firebaseInitialized = true;
+      console.log('Firebase inicializado com sucesso');
+      
+      // Configurações após inicialização
+      setupFirebaseServices();
+    } catch (error) {
+      console.error('Erro ao inicializar Firebase:', error);
+      showNotification('Erro ao inicializar o sistema. Por favor, verifique as configurações.', 'error');
+    }
   } else {
-    throw new Error('Configuração não encontrada em config.js');
+    console.error('Configuração do Firebase não disponível');
+    showNotification('Configuração do Firebase não encontrada. Verifique o arquivo secret.json.', 'error');
   }
-} catch (error) {
-  console.warn('Arquivo config.js não encontrado ou configuração inválida. Usando configuração de fallback.', error);
-  
-  // Configuração de fallback (para desenvolvimento local apenas)
-  firebaseConfig = {
-    apiKey: "CHAVE_API_FIREBASE",
-    authDomain: "mapeju-cardapio.firebaseapp.com",
-    projectId: "mapeju-cardapio",
-    storageBucket: "mapeju-cardapio.appspot.com",
-    messagingSenderId: "1055368224770",
-    appId: "1:1055368224770:web:f3a5771fc333f192a3071b"
-  };
 }
 
-// Inicializar o Firebase
-firebase.initializeApp(firebaseConfig);
+// Configurar serviços do Firebase após a inicialização
+function setupFirebaseServices() {
+  // Obter instâncias do Firestore e Auth
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+  
+  // Configurar Firestore para persistência offline usando apenas cache settings
+  // sem chamar enableIndexedDbPersistence que está sendo descontinuado
+  db.settings({
+    cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
+    merge: true
+  });
+  
+  // Configurar coleções do Firestore
+  window.categoriesRef = db.collection('categories');
+  window.productsRef = db.collection('products');
+  window.cartsRef = db.collection('carts');
+  window.imagesRef = db.collection('product_images'); // Mantido para migração
+  
+  // Configurar listener de autenticação
+  setupAuthListener(auth);
+  
+  // Notificar que o Firebase está pronto
+  window.dispatchEvent(new Event('firebase_initialized'));
+}
 
-// Obter instâncias do Firestore e Auth
-const db = firebase.firestore();
-const auth = firebase.auth();
+// Configurar listener de autenticação
+function setupAuthListener(auth) {
+  auth.onAuthStateChanged(function(user) {
+    const adminPanel = document.getElementById('admin-panel');
+    const adminLoginBtn = document.getElementById('admin-login-btn');
+    
+    if (user) {
+      // Usuário está logado
+      console.log('Usuário autenticado:', user.email);
+      
+      // Mostrar email do usuário no painel administrativo
+      const adminUserEmail = document.getElementById('admin-user-email');
+      if (adminUserEmail) {
+        adminUserEmail.textContent = user.email;
+      }
+      
+      // Mostrar painel administrativo se o botão for clicado
+      if (adminLoginBtn) {
+        adminLoginBtn.addEventListener('click', function() {
+          if (adminPanel) {
+            adminPanel.style.display = 'block';
+          }
+        });
+      }
+    } else {
+      // Usuário não autenticado
+      console.log('Usuário não autenticado');
+  
+      // Configurar botão para abrir modal de login
+      if (adminLoginBtn) {
+        adminLoginBtn.addEventListener('click', function() {
+          const adminModal = document.getElementById('admin-login-modal');
+          if (adminModal) {
+            adminModal.style.display = 'block';
+          }
+        });
+      }
+    }
+  });
+}
 
-// Configurar Firestore para persistência offline usando apenas cache settings
-// sem chamar enableIndexedDbPersistence que está sendo descontinuado
-db.settings({
-  cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
-  merge: true
+// Escutar evento de configurações carregadas
+window.addEventListener('app_config_loaded', function() {
+  initializeFirebase();
 });
-
-// Configurar coleções do Firestore
-const categoriesRef = db.collection('categories');
-const productsRef = db.collection('products');
-const cartsRef = db.collection('carts');
-const imagesRef = db.collection('product_images'); // Mantido para migração
 
 // Função para criar um ID único
 function generateId() {
@@ -91,45 +145,6 @@ function showNotification(message, type = 'info') {
     }, 500);
   }, 3000);
 }
-
-// Verificar estado de autenticação
-auth.onAuthStateChanged(function(user) {
-  const adminPanel = document.getElementById('admin-panel');
-  const adminLoginBtn = document.getElementById('admin-login-btn');
-  
-  if (user) {
-    // Usuário está logado
-    console.log('Usuário autenticado:', user.email);
-    
-    // Mostrar email do usuário no painel administrativo
-    const adminUserEmail = document.getElementById('admin-user-email');
-    if (adminUserEmail) {
-      adminUserEmail.textContent = user.email;
-    }
-    
-    // Mostrar painel administrativo se o botão for clicado
-    if (adminLoginBtn) {
-      adminLoginBtn.addEventListener('click', function() {
-        if (adminPanel) {
-          adminPanel.style.display = 'block';
-        }
-      });
-    }
-  } else {
-    // Usuário não autenticado
-    console.log('Usuário não autenticado');
-
-    // Configurar botão para abrir modal de login
-    if (adminLoginBtn) {
-      adminLoginBtn.addEventListener('click', function() {
-        const adminModal = document.getElementById('admin-login-modal');
-        if (adminModal) {
-          adminModal.style.display = 'block';
-        }
-      });
-    }
-  }
-});
 
 // Função para redimensionar imagem com compressão mais agressiva
 function resizeImage(file, maxWidth = 400, maxHeight = 400, quality = 0.3) {
@@ -329,19 +344,17 @@ async function loadProductImage(imageData) {
 
 // Exportar objetos do Firebase para uso em outros scripts
 window.appFirebase = {
-  db,
-  auth,
-  categoriesRef,
-  productsRef,
-  cartsRef,
-  imagesRef,
   generateId,
   showNotification,
   uploadProductImage,
   loadProductImage,
   updateProduct: async function(productId, productData) {
     try {
-        await this.productsRef.doc(productId).update({
+        // Obter referências do Firebase quando necessário
+        const db = firebase.firestore();
+        const productsRef = db.collection('products');
+        
+        await productsRef.doc(productId).update({
             ...productData,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });

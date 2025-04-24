@@ -993,11 +993,16 @@
         
         // Função para carregar o Google Maps com a chave de API
         function loadGoogleMaps() {
-            let apiKey = 'CHAVE_API_GOOGLE_MAPS';
+            let apiKey = '';
             
-            // Tentar obter a chave do arquivo de configuração
+            // Obter a chave do arquivo de configuração
             if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.GOOGLE_MAPS_API_KEY) {
                 apiKey = APP_CONFIG.GOOGLE_MAPS_API_KEY;
+            }
+            
+            if (!apiKey) {
+                console.error('Chave de API do Google Maps não encontrada');
+                return;
             }
             
             // Criar e adicionar o script do Google Maps
@@ -1026,7 +1031,10 @@
     <!-- Inicializar o carregamento do Google Maps após carregar as configurações -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            loadGoogleMaps();
+            // Aguarda as configurações serem carregadas antes de inicializar o Google Maps
+            window.addEventListener('app_config_loaded', function() {
+                loadGoogleMaps();
+            });
         });
     </script>
 </body>
